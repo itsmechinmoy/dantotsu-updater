@@ -1,0 +1,9 @@
+{
+	"workflow": {
+		"owner": "rebelonion",
+		"repo": "Dantotsu",
+		"name": "beta.yml",
+		"branch": "dev"
+	},
+	"delay": 10
+}
