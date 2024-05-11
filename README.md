@@ -1,4 +1,4 @@
-# [Dantotsu]("https://github.com/rebelonion/Dantotsu/tree/dev") Updater ( FOR THE PRETEST [ALPHA] APK NOT ANY OTHER VERSION )
+# [Dantotsu](https://github.com/rebelonion/Dantotsu/tree/dev) Updater ( FOR THE PRETEST [ALPHA] APK NOT ANY OTHER VERSION )
 
 This is a simple script that grabs the latest release from the actions artifact of the last run, downloads the zip file, grabs the pretester apk from it, then uploads it to releases.
 
