@@ -31,7 +31,7 @@ func main() {
 		return
 	}
 
-	data.UpdateInfo(data.Info{ElapsedTime: time.Since(prevTime).Seconds()})
+	data.UpdateInfo(data.Info{ElapsedTime: time.Since(prevTime).Seconds(), Status: "success"})
 }
 
 func getTokenArgs() string {
