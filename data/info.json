@@ -1,1 +1,1 @@
-{"commit-log":"- fix: some missing thumbnails ~aayush262","status":"success","elapsed-time":20613.27463201,"workflow":{"id":9306881705,"title":"fix: some missing thumbnails"}}
+{"commit-log":"- feat: revamping text activities (#406)\n\n* feat(storyReply): redesigned components\r\n\r\n* feat(storyReply): fixed all markdowns ~ibo","status":"success","elapsed-time":5999.382116028,"workflow":{"id":9330653177,"title":"feat: revamping text activities (#406)"}}
