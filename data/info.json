@@ -1,1 +1,1 @@
-{"commit-log":"- feat: downloading extensions ~rebelonion\n","status":"success","elapsed-time":1.8835758710000001,"workflow":{"id":8756663750,"title":"feat: downloading extensions"}}
+{"commit-log":"- feat(settings): fully fledged AniList settings (#453) ~ibo\n- [skip ci] feat: copy username and better profile dropdown menu (#429) ~ibo\n- [skip ci] feat(github): create releases on forks (#449) ~ibo","status":"artifacts expired","elapsed-time":1.8835758710000001,"workflow":{"id":9844775923,"title":"feat(settings): fully fledged AniList settings (#453)"}}
