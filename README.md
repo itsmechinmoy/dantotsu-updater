@@ -10,3 +10,5 @@ Download [Obtainium](https://github.com/ImranR98/Obtainium) then add this reposi
 
 Make sure to toggle these settings when you add it to Obtainium
 - Verify the 'latest' tag
+
+[Add Repository](novelyomi://add-repo?url=https://raw.githubusercontent.com/dannovels/novel-extensions/repo/index.min.json)
