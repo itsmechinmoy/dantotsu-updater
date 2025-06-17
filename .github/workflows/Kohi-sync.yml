@@ -1,0 +1,76 @@
+name: Sync Kohi-den Extensions
+
+on:
+  schedule:
+    - cron: '0 * * * *'
+  workflow_dispatch:
+
+jobs:
+  sync-extensions:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure Git identity
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+
+      - name: Set up SSH for Codeberg and GitLab
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -t rsa codeberg.org >> ~/.ssh/known_hosts
+          ssh-keyscan -t rsa gitlab.com >> ~/.ssh/known_hosts
+
+      - name: Sync extensions-source to Codeberg
+        run: |
+          mkdir extensions-source
+          cd extensions-source
+          git clone https://kohiden.xyz/Kohi-den/extensions-source.git .
+          DEFAULT_BRANCH=$(git remote show origin | grep 'HEAD branch' | awk '{print $NF}')
+          if [ -z "$DEFAULT_BRANCH" ]; then
+            echo "Error: Could not determine default branch. Repository might be empty."
+            exit 1
+          fi
+          echo "Default branch is $DEFAULT_BRANCH"
+          git fetch origin "$DEFAULT_BRANCH"
+          git checkout "$DEFAULT_BRANCH"
+          git branch extensions-source
+          git checkout extensions-source
+          git remote add codeberg git@codeberg.org:itsmechinmoy/extensions.git
+          git push codeberg extensions-source --force
+        shell: bash
+
+      - name: Sync extensions-source to GitLab
+        run: |
+          cd "$GITHUB_WORKSPACE/extensions-source"
+          git remote add gitlab git@gitlab.com:itsmechinmoy/extension.git
+          git push gitlab extensions-source --force
+        shell: bash
+
+      - name: Sync extensions to Codeberg
+        run: |
+          cd "$GITHUB_WORKSPACE"
+          mkdir extensions
+          cd extensions
+          git clone https://kohiden.xyz/Kohi-den/extensions.git .
+          DEFAULT_BRANCH=$(git remote show origin | grep 'HEAD branch' | awk '{print $NF}')
+          if [ -z "$DEFAULT_BRANCH" ]; then
+            echo "Error: Could not determine default branch. Repository might be empty."
+            exit 1
+          fi
+          echo "Default branch is $DEFAULT_BRANCH"
+          git fetch origin "$DEFAULT_BRANCH"
+          git checkout "$DEFAULT_BRANCH"
+          git branch extensions
+          git checkout extensions
+          git remote add codeberg git@codeberg.org:itsmechinmoy/extensions.git
+          git push codeberg extensions --force
+        shell: bash
+
+      - name: Sync extensions to GitLab
+        run: |
+          cd "$GITHUB_WORKSPACE/extensions"
+          git remote add gitlab git@gitlab.com:itsmechinmoy/extension.git
+          git push gitlab extensions --force
+        shell: bash
