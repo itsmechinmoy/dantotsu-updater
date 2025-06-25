@@ -1,4 +1,4 @@
-name: Sync Echo and Create Releases
+name: Sync Echo and Create Nightly Releases
 
 permissions:
   contents: write
@@ -38,12 +38,14 @@ jobs:
           echo "LATEST_RUN_ID=$LATEST_RUN_ID" >> $GITHUB_OUTPUT
 
       - name: Download last run ID artifact
-        uses: actions/download-artifact@v4
+        uses: dawidd6/action-download-artifact@v6
         with:
+          workflow: echo.yml
           name: last-run-id
           path: .
         continue-on-error: true
         env:
+          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
           DEBUG_MESSAGE: "No previous last-run-id artifact found. This is expected on the first run or if artifact expired."
 
       - name: Check if new build exists
@@ -165,6 +167,7 @@ jobs:
           RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.PAT_TOKEN }}" \
                          -H "Accept: application/vnd.github+json" \
                          https://api.github.com/repos/itsmechinmoy/echo/git/refs/tags/${{ env.RELEASE_TAG }})
+          echo "API Response: $RESPONSE"
           if echo "$RESPONSE" | jq -e .ref > /dev/null; then
             echo "Tag ${{ env.RELEASE_TAG }} already exists"
             echo "TAG_EXISTS=true" >> $GITHUB_OUTPUT
@@ -179,11 +182,17 @@ jobs:
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' && steps.check-tag.outputs.TAG_EXISTS == 'true' }}
         run: |
           echo "Deleting existing tag ${{ env.RELEASE_TAG }} in itsmechinmoy/echo"
-          curl -s -X DELETE \
+          RESPONSE=$(curl -s -X DELETE \
                -H "Authorization: Bearer ${{ secrets.PAT_TOKEN }}" \
                -H "Accept: application/vnd.github+json" \
-               https://api.github.com/repos/itsmechinmoy/echo/git/refs/tags/${{ env.RELEASE_TAG }}
-          echo "Tag ${{ env.RELEASE_TAG }} deleted"
+               https://api.github.com/repos/itsmechinmoy/echo/git/refs/tags/${{ env.RELEASE_TAG }})
+          echo "Delete API Response: $RESPONSE"
+          if [ -z "$RESPONSE" ]; then
+            echo "Tag ${{ env.RELEASE_TAG }} deleted successfully"
+          else
+            echo "Failed to delete tag. Response: $RESPONSE"
+            exit 1
+          fi
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
 
@@ -239,7 +248,7 @@ jobs:
           bodyFile: commit_log.txt
           artifacts: app-release.apk
           draft: false
-          prerelease: false
+          prerelease: true
           token: ${{ secrets.PAT_TOKEN }}
           skipIfReleaseExists: false
           omitBodyDuringUpdate: false
