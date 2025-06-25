@@ -113,9 +113,15 @@ jobs:
           echo "APK found: $APK_FILE"
           mv "$APK_FILE" app-release.apk
           
-          # Calculate SHA256 checksum
-          SHA256=$(sha256sum app-release.apk | cut -d ' ' -f 1)
-          echo "APK_SHA256=$SHA256" >> $GITHUB_ENV
+          # Verify APK exists and calculate SHA256 checksum
+          if [ -f app-release.apk ]; then
+            SHA256=$(sha256sum app-release.apk | awk '{print $1}')
+            echo "Calculated SHA256: $SHA256"
+            echo "APK_SHA256=$SHA256" >> $GITHUB_ENV
+          else
+            echo "Error: app-release.apk not found after move!"
+            exit 1
+          fi
           
           # Get commit SHA from brahmkshatriya/echo
           COMMIT_SHA=$(curl -H "Authorization: Bearer ${{ secrets.PAT_TOKEN }}" \
@@ -163,9 +169,17 @@ jobs:
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
         run: |
           git remote add gitlab git@gitlab.com:itsmechinmoy/echo.git
+          git fetch gitlab
           git rm -f .github/workflows/echo.yml || echo "File not present, continuing"
           git commit -m "Remove workflow file for GitLab sync" || echo "No changes to commit"
-          git push gitlab main --force
+          # Merge gitlab/main to avoid conflicts
+          git merge gitlab/main --allow-unrelated-histories -m "Merge gitlab/itsmechinmoy/echo for sync" || {
+            echo "Merge conflicts with gitlab, resolving by keeping GitHub state"
+            git checkout origin/main -- .
+            git add .
+            git commit -m "Resolved GitLab merge conflict by keeping GitHub state"
+          }
+          git push gitlab main
 
       - name: Create GitHub Release
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
