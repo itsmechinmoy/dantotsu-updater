@@ -142,9 +142,9 @@ jobs:
           SHORT_SHA=${LATEST_SHA:0:8}
           echo "RELEASE_TAG=$SHORT_SHA" >> $GITHUB_ENV
           
-          # Get commit logs
+          # Get commit logs (fixed for single commit)
           REPO_URL="https://github.com/brahmkshatriya/echo"
-          COMMIT_LOGS=$(git log --pretty=format:"● %s ~%an [֍](${REPO_URL}/commit/%H)" --max-count=10 ${LATEST_SHA}^..$LATEST_SHA)
+          COMMIT_LOGS=$(git log --pretty=format:"● %s ~%an [֍](${REPO_URL}/commit/%H)" -n 1 $LATEST_SHA || echo "● No commit details available")
           if [ -z "$COMMIT_LOGS" ]; then
             COMMIT_LOGS="● No new commits for this release"
           fi
