@@ -117,7 +117,7 @@ jobs:
           if [ -f app-release.apk ]; then
             SHA256=$(sha256sum app-release.apk | awk '{print $1}')
             echo "Calculated SHA256: $SHA256"
-            echo "APK_SHA256=$SHA256" >> $GITHUB_ENV
+            echo " settlement = $SHA256" >> $GITHUB_ENV
           else
             echo "Error: app-release.apk not found after move!"
             exit 1
@@ -132,12 +132,11 @@ jobs:
           
           # Create shortened tag for release
           SHORT_SHA=${COMMIT_SHA:0:8}
-          RELEASE_TAG="nightly-$SHORT_SHA"
-          echo "RELEASE_TAG=$RELEASE_TAG" >> $GITHUB_ENV
+          echo "RELEASE_TAG=$SHORT_SHA" >> $GITHUB_ENV
           
           # Get commit logs
           REPO_URL="https://github.com/brahmkshatriya/echo"
-          COMMIT_LOGS=$(git log --pretty=format:"● %s ~%an [֍>]((${REPO_URL}/commit/%H)" --max-count=10 ${COMMIT_SHA}^..$COMMIT_SHA)
+          COMMIT_LOGS=$(git log --pretty=format:"● %s ~%an [֍](${REPO_URL}/commit/%H)" --max-count=10 ${COMMIT_SHA}^..$COMMIT_SHA)
           if [ -z "$COMMIT_LOGS" ]; then
             COMMIT_LOGS="● No new commits for this release"
           fi
@@ -153,8 +152,23 @@ jobs:
           echo "Commit log with checksums:"
           cat commit_log.txt
 
-      - name: Create Tag in itsmechinmoy/echo
+      - name: Check if Tag Exists
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
+        id: check-tag
+        run: |
+          echo "Checking if tag ${{ env.RELEASE_TAG }} exists in itsmechinmoy/echo"
+          if git ls-remote --tags origin | grep -q "refs/tags/${{ env.RELEASE_TAG }}$"; then
+            echo "Tag ${{ env.RELEASE_TAG }} already exists"
+            echo "TAG_EXISTS=true" >> $GITHUB_OUTPUT
+          else
+            echo "Tag ${{ env.RELEASE_TAG }} does not exist"
+            echo "TAG_EXISTS=false" >> $GITHUB_OUTPUT
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
+
+      - name: Create Tag in itsmechinmoy/echo
+        if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' && steps.check-tag.outputs.TAG_EXISTS == 'false' }}
         run: |
           echo "Creating tag ${{ env.RELEASE_TAG }} in itsmechinmoy/echo"
           git tag -f ${{ env.RELEASE_TAG }} ${{ env.COMMIT_SHA }}
@@ -195,19 +209,23 @@ jobs:
           }
           git push gitlab main
 
-      - name: Create GitHub Release
+      - name: Create or Update GitHub Release
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
         uses: ncipollo/release-action@v1
         with:
           owner: itsmechinmoy
           repo: echo
           tag: ${{ env.RELEASE_TAG }}
-          name: Echo ${{ env.RELEASE_TAG }}
+          name: New Echo Nightly Released
           bodyFile: commit_log.txt
           artifacts: app-release.apk
           draft: false
-          prerelease: true
+          prerelease: false
           token: ${{ secrets.PAT_TOKEN }}
           skipIfReleaseExists: true
+          omitBodyDuringUpdate: false
+          omitNameDuringUpdate: false
+          omitPrereleaseDuringUpdate: false
+          replacesArtifacts: false
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
