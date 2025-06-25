@@ -48,12 +48,12 @@ jobs:
         uses: dawidd6/action-download-artifact@v6
         with:
           workflow: echo.yml
-          name: last-run-id
+          name: last-sha
           path: .
         continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
-          DEBUG_MESSAGE: "No previous last-run-id artifact found. This is expected on the first run or if artifact expired."
+          DEBUG_MESSAGE: "No previous last-sha artifact found. This is expected on the first run or if artifact expired."
 
       - name: Check if new commit exists
         id: compare
@@ -101,13 +101,13 @@ jobs:
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
         uses: actions/upload-artifact@v4
         with:
-          name: last-run-id
+          name: last-sha
           path: |
             last_run_id.txt
             last_commit_sha.txt
           retention-days: 90
         env:
-          DEBUG_MESSAGE: "Uploading last-run-id artifact"
+          DEBUG_MESSAGE: "Uploading last-sha artifact"
 
       - name: Download Nightly Artifact
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
