@@ -248,7 +248,7 @@ jobs:
           bodyFile: commit_log.txt
           artifacts: app-release.apk
           draft: false
-          prerelease: true
+          prerelease: false
           token: ${{ secrets.PAT_TOKEN }}
           skipIfReleaseExists: false
           omitBodyDuringUpdate: false
