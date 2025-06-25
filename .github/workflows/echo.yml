@@ -28,7 +28,6 @@ jobs:
         id: check-build
         run: |
           echo "Checking for new nightly build from brahmkshatriya/echo"
-          # Download the latest artifact from brahmkshatriya/echo nightly workflow
           curl -H "Authorization: Bearer ${{ secrets.PAT_TOKEN }}" \
                -H "Accept: application/vnd.github+json" \
                https://api.github.com/repos/brahmkshatriya/echo/actions/workflows/nightly.yml/runs?status=success \
@@ -45,7 +44,7 @@ jobs:
           path: .
         continue-on-error: true
         env:
-          DEBUG_MESSAGE: "No previous last-run-id artifact found. This is expected on the first run or if the artifact expired."
+          DEBUG_MESSAGE: "No previous last-run-id artifact found. This is expected on the first run or if artifact expired."
 
       - name: Check if new build exists
         id: compare
@@ -56,15 +55,11 @@ jobs:
           if [ -f last_run_id.txt ]; then
             LAST_RUN_ID=$(cat last_run_id.txt)
             echo "Last saved run ID: $LAST_RUN_ID"
-            echo "LAST_RUN_ID=$LAST_RUN_ID" >> $GITHUB_OUTPUT
+            echo "LAST_RUN_ID=${LAST_RUN_ID}" >> $GITHUB_OUTPUT
           else
             LAST_RUN_ID=""
             echo "No previous run ID found."
-            echo "LAST_RUN_ID=$LAST_RUN_ID" >> $GITHUB_OUTPUT
-            if [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
-              echo "No previous run ID found and not a manual trigger. Forcing release for first run."
-              echo "SHOULD_RELEASE=true" >> $GITHUB_OUTPUT
-            fi
+            echo "LAST_RUN_ID=${LAST_RUN_ID}" >> $GITHUB_OUTPUT
           fi
 
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
@@ -81,7 +76,10 @@ jobs:
 
       - name: Save Current Run ID for Next Run
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
-        run: cat latest_run_id.txt > last_run_id.txt
+        run: |
+          echo "Saving LATEST_RUN_ID=$LATEST_RUN_ID to last_run_id.txt"
+          cat latest_run_id.txt > last_run_id.txt
+          cat last_run_id.txt
 
       - name: Upload Current Run ID as an Artifact
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
@@ -89,7 +87,9 @@ jobs:
         with:
           name: last-run-id
           path: last_run_id.txt
-          retention-days: 90
+          retention-days: 7
+        env:
+          DEBUG_MESSAGE: "Uploading last-run-id artifact"
 
       - name: Download Nightly Artifact
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
@@ -179,7 +179,11 @@ jobs:
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' && steps.check-tag.outputs.TAG_EXISTS == 'true' }}
         run: |
           echo "Deleting existing tag ${{ env.RELEASE_TAG }} in itsmechinmoy/echo"
-          git push origin --delete ${{ env.RELEASE_TAG }}
+          curl -s -X DELETE \
+               -H "Authorization: Bearer ${{ secrets.PAT_TOKEN }}" \
+               -H "Accept: application/vnd.github+json" \
+               https://api.github.com/repos/itsmechinmoy/echo/git/refs/tags/${{ env.RELEASE_TAG }}
+          echo "Tag ${{ env.RELEASE_TAG }} deleted"
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
 
@@ -216,7 +220,6 @@ jobs:
           git fetch gitlab
           git rm -f .github/workflows/echo.yml || echo "File not present, continuing"
           git commit -m "Remove workflow file for GitLab sync" || echo "No changes to commit"
-          # Merge gitlab/main to avoid conflicts
           git merge gitlab/main --allow-unrelated-histories -m "Merge gitlab/itsmechinmoy/echo for sync" || {
             echo "Merge conflicts with gitlab, resolving by keeping GitHub state"
             git checkout origin/main -- .
@@ -243,5 +246,6 @@ jobs:
           omitNameDuringUpdate: false
           omitPrereleaseDuringUpdate: false
           replacesArtifacts: false
+          allowUpdates: true
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
