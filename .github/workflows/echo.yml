@@ -16,7 +16,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: itsmechinmoy/echo
-          token: ${{ secrets.PAT_TOKEN }}  # Use PAT for authentication
+          token: ${{ secrets.PAT_TOKEN }}
           fetch-depth: 0
 
       - name: Configure Git identity
@@ -37,8 +37,6 @@ jobs:
             exit 1
           fi
           LATEST_COMMIT_SHA=$(echo "$RESPONSE" | jq -r '.workflow_runs[0].head_sha')
-          echo "Latest successful run ID: $LATEST_RUN_ID"
-          echo "Latest commit SHA: $LATEST_COMMIT_SHA"
           echo "LATEST_RUN_ID=$LATEST_RUN_ID" >> $GITHUB_OUTPUT
           echo "LATEST_COMMIT_SHA=$LATEST_COMMIT_SHA" >> $GITHUB_OUTPUT
           echo "$LATEST_RUN_ID" > latest_run_id.txt
@@ -53,61 +51,31 @@ jobs:
         continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
-          DEBUG_MESSAGE: "No previous last-sha artifact found. This is expected on the first run or if artifact expired."
 
       - name: Check if new commit exists
         id: compare
         run: |
           LATEST_RUN_ID=$(cat latest_run_id.txt)
           LATEST_COMMIT_SHA=$(cat latest_commit_sha.txt)
-          echo "Latest run ID: $LATEST_RUN_ID"
-          echo "Latest commit SHA: $LATEST_COMMIT_SHA"
-          
+
           if [ -f last_run_id.txt ] && [ -f last_commit_sha.txt ]; then
             LAST_RUN_ID=$(cat last_run_id.txt)
             LAST_COMMIT_SHA=$(cat last_commit_sha.txt)
-            echo "Last saved run ID: $LAST_RUN_ID"
-            echo "Last saved commit SHA: $LAST_COMMIT_SHA"
             echo "LAST_RUN_ID=${LAST_RUN_ID}" >> $GITHUB_OUTPUT
             echo "LAST_COMMIT_SHA=${LAST_COMMIT_SHA}" >> $GITHUB_OUTPUT
           else
             LAST_RUN_ID=""
             LAST_COMMIT_SHA=""
-            echo "No previous run ID or commit SHA found."
             echo "LAST_RUN_ID=${LAST_RUN_ID}" >> $GITHUB_OUTPUT
             echo "LAST_COMMIT_SHA=${LAST_COMMIT_SHA}" >> $GITHUB_OUTPUT
           fi
 
           if [ "$LATEST_COMMIT_SHA" == "$LAST_COMMIT_SHA" ]; then
-            echo "No new commits in nightly build. Stopping workflow."
             echo "SHOULD_RELEASE=false" >> $GITHUB_OUTPUT
             exit 0
           else
-            echo "New commit found in nightly build. Continuing workflow."
             echo "SHOULD_RELEASE=true" >> $GITHUB_OUTPUT
           fi
-
-      - name: Save Current Run ID and Commit SHA for Next Run
-        if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
-        run: |
-          echo "Saving LATEST_RUN_ID=$LATEST_RUN_ID to last_run_id.txt"
-          cat latest_run_id.txt > last_run_id.txt
-          echo "Saving LATEST_COMMIT_SHA=$LATEST_COMMIT_SHA to last_commit_sha.txt"
-          cat latest_commit_sha.txt > last_commit_sha.txt
-          cat last_run_id.txt
-          cat last_commit_sha.txt
-
-      - name: Upload Current Run ID and Commit SHA as Artifact
-        if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: last-sha
-          path: |
-            last_run_id.txt
-            last_commit_sha.txt
-          retention-days: 90
-        env:
-          DEBUG_MESSAGE: "Uploading last-sha artifact"
 
       - name: Download Nightly Artifact
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
@@ -118,73 +86,36 @@ jobs:
                -H "Accept: application/vnd.github+json" \
                https://api.github.com/repos/brahmkshatriya/echo/actions/runs/$LATEST_RUN_ID/artifacts \
                | jq -r '.artifacts[0].archive_download_url' > artifact_url.txt
-          
           ARTIFACT_URL=$(cat artifact_url.txt)
-          echo "Downloading artifact from: $ARTIFACT_URL"
-          curl -L -H "Authorization: Bearer ${{ secrets.PAT_TOKEN }}" \
-               -o artifact.zip "$ARTIFACT_URL"
-          
-          # Unzip the artifact
+          curl -L -H "Authorization: Bearer ${{ secrets.PAT_TOKEN }}" -o artifact.zip "$ARTIFACT_URL"
           unzip artifact.zip -d artifact_contents
-          
-          # Find the APK file
           APK_FILE=$(find artifact_contents -name "*.apk" | head -1)
-          if [ -z "$APK_FILE" ]; then
-            echo "No APK found in artifact!"
-            exit 1
-          fi
-          echo "APK found: $APK_FILE"
+          if [ -z "$APK_FILE" ]; then echo "No APK found"; exit 1; fi
           mv "$APK_FILE" app-release.apk
-          
-          # Verify APK exists and calculate SHA256 checksum
-          if [ -f app-release.apk ]; then
-            SHA256=$(sha256sum app-release.apk | awk '{print $1}')
-            echo "Calculated SHA256: $SHA256"
-            echo "APK_SHA256=$SHA256" >> $GITHUB_ENV
-          else
-            echo "Error: app-release.apk not found after move!"
-            exit 1
-          fi
-          
-          # Get commit SHA from brahmkshatriya/echo
+          SHA256=$(sha256sum app-release.apk | awk '{print $1}')
+          echo "APK_SHA256=$SHA256" >> $GITHUB_ENV
           COMMIT_SHA=$(cat latest_commit_sha.txt)
           echo "COMMIT_SHA=$COMMIT_SHA" >> $GITHUB_ENV
-          
-          # Create shortened tag for release
           SHORT_SHA=${COMMIT_SHA:0:8}
           echo "RELEASE_TAG=$SHORT_SHA" >> $GITHUB_ENV
-          
-          # Get commit logs
           REPO_URL="https://github.com/brahmkshatriya/echo"
-          COMMIT_LOGS=$(git log --pretty=format:"● %s ~%an [֍](${REPO_URL}/commit/%H)" --max-count=10 ${COMMIT_SHA}^..$COMMIT_SHA)
-          if [ -z "$COMMIT_LOGS" ]; then
-            COMMIT_LOGS="● No new commits for this release"
-          fi
+          COMMIT_LOGS=$(git log --pretty=format:"● %s ~%an [֍](${REPO_URL}/commit/%H)" --max-count=10 ${COMMIT_SHA}^..$COMMIT_SHA || echo "")
+          [ -z "$COMMIT_LOGS" ] && COMMIT_LOGS="● No new commits for this release"
           COMMIT_LOGS=$(echo "$COMMIT_LOGS" | sed -E "s@#([0-9]+)@[#\1](${REPO_URL}/pull/\1)@g")
           echo -e "Commits:\n" > commit_log.txt
           echo "$COMMIT_LOGS" | sed 's/●/\n●/g' | sed '/^$/d' >> commit_log.txt
-          echo -e "\n---\n" >> commit_log.txt
-          echo -e "### Checksums\n" >> commit_log.txt
-          echo "| Variant | SHA-256 |" >> commit_log.txt
-          echo "| ------- | ------- |" >> commit_log.txt
-          echo "| Universal | $SHA256 |" >> commit_log.txt
-          
-          echo "Commit log with checksums:"
-          cat commit_log.txt
+          echo -e "\n---\n### Checksums\n| Variant | SHA-256 |\n| ------- | ------- |\n| Universal | $SHA256 |" >> commit_log.txt
 
       - name: Check if Tag Exists
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
         id: check-tag
         run: |
-          echo "Checking if tag ${{ env.RELEASE_TAG }} exists in itsmechinmoy/echo"
           RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.PAT_TOKEN }}" \
                          -H "Accept: application/vnd.github+json" \
                          https://api.github.com/repos/itsmechinmoy/echo/git/refs/tags/${{ env.RELEASE_TAG }})
           if echo "$RESPONSE" | jq -e .ref > /dev/null; then
-            echo "Tag ${{ env.RELEASE_TAG }} already exists"
             echo "TAG_EXISTS=true" >> $GITHUB_OUTPUT
           else
-            echo "Tag ${{ env.RELEASE_TAG }} does not exist"
             echo "TAG_EXISTS=false" >> $GITHUB_OUTPUT
           fi
         env:
@@ -193,19 +124,15 @@ jobs:
       - name: Delete Existing Tag
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' && steps.check-tag.outputs.TAG_EXISTS == 'true' }}
         run: |
-          echo "Deleting existing tag ${{ env.RELEASE_TAG }} in itsmechinmoy/echo"
           curl -s -X DELETE \
                -H "Authorization: Bearer ${{ secrets.PAT_TOKEN }}" \
-               -H "Accept: application/vnd.github+json" \
                https://api.github.com/repos/itsmechinmoy/echo/git/refs/tags/${{ env.RELEASE_TAG }}
-          echo "Tag ${{ env.RELEASE_TAG }} deleted"
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
 
       - name: Create Tag in itsmechinmoy/echo
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
         run: |
-          echo "Creating tag ${{ env.RELEASE_TAG }} in itsmechinmoy/echo"
           git tag -f ${{ env.RELEASE_TAG }} ${{ env.COMMIT_SHA }}
           git push origin ${{ env.RELEASE_TAG }} --force
         env:
@@ -224,8 +151,8 @@ jobs:
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
         run: |
           git remote add codeberg git@codeberg.org:itsmechinmoy/echo.git
-          git rm -f .github/workflows/echo.yml || echo "File not present, continuing"
-          git commit -m "Remove workflow file for Codeberg sync" || echo "No changes to commit"
+          git rm -f .github/workflows/echo.yml || echo "Not found"
+          git commit -m "Remove workflow file for Codeberg sync" || echo "No changes"
           git push codeberg main --force
 
       - name: Prepare and push to GitLab
@@ -233,10 +160,9 @@ jobs:
         run: |
           git remote add gitlab git@gitlab.com:itsmechinmoy/echo.git
           git fetch gitlab
-          git rm -f .github/workflows/echo.yml || echo "File not present, continuing"
-          git commit -m "Remove workflow file for GitLab sync" || echo "No changes to commit"
-          git merge gitlab/main --allow-unrelated-histories -m "Merge gitlab/itsmechinmoy/echo for sync" || {
-            echo "Merge conflicts with gitlab, resolving by keeping GitHub state"
+          git rm -f .github/workflows/echo.yml || echo "Not found"
+          git commit -m "Remove workflow file for GitLab sync" || echo "No changes"
+          git merge gitlab/main --allow-unrelated-histories -m "Merge gitlab state" || {
             git checkout origin/main -- .
             git add .
             git commit -m "Resolved GitLab merge conflict by keeping GitHub state"
@@ -264,3 +190,24 @@ jobs:
           allowUpdates: true
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
+
+      - name: Save and Upload last-sha for future runs
+        if: always()
+        run: |
+          if [[ -f latest_run_id.txt && -f latest_commit_sha.txt ]]; then
+            cp latest_run_id.txt last_run_id.txt
+            cp latest_commit_sha.txt last_commit_sha.txt
+          else
+            echo "No latest SHA files found, skipping."
+            exit 0
+          fi
+
+      - name: Upload last-sha Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: last-sha
+          path: |
+            last_run_id.txt
+            last_commit_sha.txt
+          retention-days: 90
