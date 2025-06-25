@@ -7,11 +7,6 @@ on:
   schedule:
     - cron: '*/30 * * * *'  # Runs every 30 minutes
   workflow_dispatch:
-    inputs:
-      force:
-        description: 'Force release even if no new commits'
-        required: false
-        default: 'false'
 
 jobs:
   sync-and-release:
@@ -37,73 +32,82 @@ jobs:
                          -H "Accept: application/vnd.github+json" \
                          https://api.github.com/repos/brahmkshatriya/echo/actions/workflows/nightly.yml/runs?status=success)
           LATEST_RUN_ID=$(echo "$RESPONSE" | jq -r '.workflow_runs[0].id')
-          LATEST_COMMIT_SHA=$(echo "$RESPONSE" | jq -r '.workflow_runs[0].head_sha')
-          if [ -z "$LATEST_RUN_ID" ] || [ -z "$LATEST_COMMIT_SHA" ]; then
+          if [ -z "$LATEST_RUN_ID" ]; then
             echo "No successful nightly runs found!"
             exit 1
           fi
+          LATEST_COMMIT_SHA=$(echo "$RESPONSE" | jq -r '.workflow_runs[0].head_sha')
           echo "Latest successful run ID: $LATEST_RUN_ID"
           echo "Latest commit SHA: $LATEST_COMMIT_SHA"
           echo "LATEST_RUN_ID=$LATEST_RUN_ID" >> $GITHUB_OUTPUT
           echo "LATEST_COMMIT_SHA=$LATEST_COMMIT_SHA" >> $GITHUB_OUTPUT
           echo "$LATEST_RUN_ID" > latest_run_id.txt
-          echo "$LATEST_COMMIT_SHA" > latest_sha.txt
+          echo "$LATEST_COMMIT_SHA" > latest_commit_sha.txt
 
-      - name: Download last SHA artifact
+      - name: Download last run ID and commit SHA artifact
         uses: dawidd6/action-download-artifact@v6
         with:
           workflow: echo.yml
-          name: last-sha
+          name: last-run-id
           path: .
         continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
-          DEBUG_MESSAGE: "No previous last-sha artifact found. This is expected on the first run or if artifact expired."
+          DEBUG_MESSAGE: "No previous last-run-id artifact found. This is expected on the first run or if artifact expired."
 
       - name: Check if new commit exists
         id: compare
         run: |
-          LATEST_COMMIT_SHA=$(cat latest_sha.txt)
+          LATEST_RUN_ID=$(cat latest_run_id.txt)
+          LATEST_COMMIT_SHA=$(cat latest_commit_sha.txt)
+          echo "Latest run ID: $LATEST_RUN_ID"
           echo "Latest commit SHA: $LATEST_COMMIT_SHA"
           
-          if [ -f last_sha.txt ]; then
-            LAST_COMMIT_SHA=$(cat last_sha.txt)
+          if [ -f last_run_id.txt ] && [ -f last_commit_sha.txt ]; then
+            LAST_RUN_ID=$(cat last_run_id.txt)
+            LAST_COMMIT_SHA=$(cat last_commit_sha.txt)
+            echo "Last saved run ID: $LAST_RUN_ID"
             echo "Last saved commit SHA: $LAST_COMMIT_SHA"
+            echo "LAST_RUN_ID=${LAST_RUN_ID}" >> $GITHUB_OUTPUT
             echo "LAST_COMMIT_SHA=${LAST_COMMIT_SHA}" >> $GITHUB_OUTPUT
           else
+            LAST_RUN_ID=""
             LAST_COMMIT_SHA=""
-            echo "No previous commit SHA found."
+            echo "No previous run ID or commit SHA found."
+            echo "LAST_RUN_ID=${LAST_RUN_ID}" >> $GITHUB_OUTPUT
             echo "LAST_COMMIT_SHA=${LAST_COMMIT_SHA}" >> $GITHUB_OUTPUT
           fi
 
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ "${{ github.event.inputs.force }}" == "true" ]; then
-            echo "Manual trigger with force=true detected. Forcing release."
-            echo "SHOULD_RELEASE=true" >> $GITHUB_OUTPUT
-          elif [ "$LATEST_COMMIT_SHA" == "$LAST_COMMIT_SHA" ] && [ -n "$LAST_COMMIT_SHA" ]; then
-            echo "No new commits found in brahmkshatriya/echo nightly. Stopping workflow."
+          if [ "$LATEST_COMMIT_SHA" == "$LAST_COMMIT_SHA" ]; then
+            echo "No new commits in nightly build. Stopping workflow."
             echo "SHOULD_RELEASE=false" >> $GITHUB_OUTPUT
             exit 0
           else
-            echo "New commit found or first run. Continuing workflow."
+            echo "New commit found in nightly build. Continuing workflow."
             echo "SHOULD_RELEASE=true" >> $GITHUB_OUTPUT
           fi
 
-      - name: Save Current SHA for Next Run
+      - name: Save Current Run ID and Commit SHA for Next Run
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
         run: |
-          echo "Saving LATEST_COMMIT_SHA=$LATEST_COMMIT_SHA to last_sha.txt"
-          cat latest_sha.txt > last_sha.txt
-          cat last_sha.txt
+          echo "Saving LATEST_RUN_ID=$LATEST_RUN_ID to last_run_id.txt"
+          cat latest_run_id.txt > last_run_id.txt
+          echo "Saving LATEST_COMMIT_SHA=$LATEST_COMMIT_SHA to last_commit_sha.txt"
+          cat latest_commit_sha.txt > last_commit_sha.txt
+          cat last_run_id.txt
+          cat last_commit_sha.txt
 
-      - name: Upload Current SHA as an Artifact
+      - name: Upload Current Run ID and Commit SHA as Artifact
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
         uses: actions/upload-artifact@v4
         with:
-          name: last-sha
-          path: last_sha.txt
+          name: last-run-id
+          path: |
+            last_run_id.txt
+            last_commit_sha.txt
           retention-days: 90
         env:
-          DEBUG_MESSAGE: "Uploading last-sha artifact"
+          DEBUG_MESSAGE: "Uploading last-run-id artifact"
 
       - name: Download Nightly Artifact
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
@@ -142,8 +146,8 @@ jobs:
             exit 1
           fi
           
-          # Get commit SHA (already fetched)
-          COMMIT_SHA=${{ steps.check-build.outputs.LATEST_COMMIT_SHA }}
+          # Get commit SHA from brahmkshatriya/echo
+          COMMIT_SHA=$(cat latest_commit_sha.txt)
           echo "COMMIT_SHA=$COMMIT_SHA" >> $GITHUB_ENV
           
           # Create shortened tag for release
@@ -160,7 +164,7 @@ jobs:
           echo -e "Commits:\n" > commit_log.txt
           echo "$COMMIT_LOGS" | sed 's/●/\n●/g' | sed '/^$/d' >> commit_log.txt
           echo -e "\n---\n" >> commit_log.txt
-          echo -e "### Checksums\n" > commit_log.txt
+          echo -e "### Checksums\n" >> commit_log.txt
           echo "| Variant | SHA-256 |" >> commit_log.txt
           echo "| ------- | ------- |" >> commit_log.txt
           echo "| Universal | $SHA256 |" >> commit_log.txt
@@ -173,20 +177,16 @@ jobs:
         id: check-tag
         run: |
           echo "Checking if tag ${{ env.RELEASE_TAG }} exists in itsmechinmoy/echo"
-          for i in {1..3}; do
-            RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.PAT_TOKEN }}" \
-                           -H "Accept: application/vnd.github+json" \
-                           https://api.github.com/repos/itsmechinmoy/echo/git/refs/tags/${{ env.RELEASE_TAG }})
-            if echo "$RESPONSE" | jq -e .ref > /dev/null; then
-              echo "Tag ${{ env.RELEASE_TAG }} already exists"
-              echo "TAG_EXISTS=true" >> $GITHUB_OUTPUT
-              exit 0
-            fi
-            echo "Attempt $i failed. Retrying..."
-            sleep 2
-          done
-          echo "Tag ${{ env.RELEASE_TAG }} does not exist"
-          echo "TAG_EXISTS=false" >> $GITHUB_OUTPUT
+          RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.PAT_TOKEN }}" \
+                         -H "Accept: application/vnd.github+json" \
+                         https://api.github.com/repos/itsmechinmoy/echo/git/refs/tags/${{ env.RELEASE_TAG }})
+          if echo "$RESPONSE" | jq -e .ref > /dev/null; then
+            echo "Tag ${{ env.RELEASE_TAG }} already exists"
+            echo "TAG_EXISTS=true" >> $GITHUB_OUTPUT
+          else
+            echo "Tag ${{ env.RELEASE_TAG }} does not exist"
+            echo "TAG_EXISTS=false" >> $GITHUB_OUTPUT
+          fi
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
 
@@ -260,7 +260,7 @@ jobs:
           omitBodyDuringUpdate: false
           omitNameDuringUpdate: false
           omitPrereleaseDuringUpdate: false
-          replacesArtifacts: true
+          replacesArtifacts: false
           allowUpdates: true
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
