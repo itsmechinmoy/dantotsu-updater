@@ -45,7 +45,7 @@ jobs:
           path: .
         continue-on-error: true
         env:
-          DEBUG_MESSAGE: "No previous last-run-id artifact found. This is expected on the first run."
+          DEBUG_MESSAGE: "No previous last-run-id artifact found. This is expected on the first run or if the artifact expired."
 
       - name: Check if new build exists
         id: compare
@@ -56,11 +56,15 @@ jobs:
           if [ -f last_run_id.txt ]; then
             LAST_RUN_ID=$(cat last_run_id.txt)
             echo "Last saved run ID: $LAST_RUN_ID"
-            echo "LAST_RUN_ID=${LAST_RUN_ID}" >> $GITHUB_OUTPUT
+            echo "LAST_RUN_ID=$LAST_RUN_ID" >> $GITHUB_OUTPUT
           else
             LAST_RUN_ID=""
             echo "No previous run ID found."
-            echo "LAST_RUN_ID=${LAST_RUN_ID}" >> $GITHUB_OUTPUT
+            echo "LAST_RUN_ID=$LAST_RUN_ID" >> $GITHUB_OUTPUT
+            if [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
+              echo "No previous run ID found and not a manual trigger. Forcing release for first run."
+              echo "SHOULD_RELEASE=true" >> $GITHUB_OUTPUT
+            fi
           fi
 
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
@@ -85,6 +89,7 @@ jobs:
         with:
           name: last-run-id
           path: last_run_id.txt
+          retention-days: 90
 
       - name: Download Nightly Artifact
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
