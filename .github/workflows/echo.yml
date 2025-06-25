@@ -1,4 +1,4 @@
-name: Sync Echo and Create Nightly Releases
+name: Sync Echo and Create Releases
 
 permissions:
   contents: write
@@ -28,81 +28,79 @@ jobs:
         id: check-build
         run: |
           echo "Checking for new nightly build from brahmkshatriya/echo"
-          RESPONSE=$(curl -H "Authorization: Bearer ${{ secrets.PAT_TOKEN }}" \
-                    -H "Accept: application/vnd.github+json" \
-                    https://api.github.com/repos/brahmkshatriya/echo/actions/workflows/nightly.yml/runs?status=success)
-          LATEST_RUN_ID=$(echo "$RESPONSE" | jq -r '.workflow_runs[0].id')
-          echo "Latest successful run ID: $LATEST_RUN_ID"
-          COMMIT_SHA=$(curl -H "Authorization: Bearer ${{ secrets.PAT_TOKEN }}" \
+          RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.PAT_TOKEN }}" \
                          -H "Accept: application/vnd.github+json" \
-                         https://api.github.com/repos/brahmkshatriya/echo/actions/runs/$LATEST_RUN_ID \
-                         | jq -r '.head_sha')
-          echo "Latest commit SHA: $COMMIT_SHA"
-          echo "LATEST_SHA=$COMMIT_SHA" >> $GITHUB_OUTPUT
-          echo "$COMMIT_SHA" > latest_sha.txt
+                         https://api.github.com/repos/brahmkshatriya/echo/actions/workflows/nightly.yml/runs?status=success)
+          LATEST_RUN_ID=$(echo "$RESPONSE" | jq -r '.workflow_runs[0].id')
+          if [ -z "$LATEST_RUN_ID" ]; then
+            echo "No successful nightly runs found!"
+            exit 1
+          fi
+          echo "Latest successful run ID: $LATEST_RUN_ID"
+          echo "LATEST_RUN_ID=$LATEST_RUN_ID" >> $GITHUB_OUTPUT
+          echo "$LATEST_RUN_ID" > latest_run_id.txt
 
-      - name: Download last SHA artifact
+      - name: Download last run ID artifact
         uses: dawidd6/action-download-artifact@v6
         with:
           workflow: echo.yml
-          name: last-sha
+          name: last-run-id
           path: .
         continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
-          DEBUG_MESSAGE: "No previous last-sha artifact found. This is expected on the first run or if artifact expired."
+          DEBUG_MESSAGE: "No previous last-run-id artifact found. This is expected on the first run or if artifact expired."
 
       - name: Check if new build exists
         id: compare
         run: |
-          LATEST_SHA=$(cat latest_sha.txt)
-          echo "Latest SHA: $LATEST_SHA"
+          LATEST_RUN_ID=$(cat latest_run_id.txt)
+          echo "Latest run ID: $LATEST_RUN_ID"
           
-          if [ -f last_sha.txt ]; then
-            LAST_SHA=$(cat last_sha.txt)
-            echo "Last saved SHA: $LAST_SHA"
+          if [ -f last_run_id.txt ]; then
+            LAST_RUN_ID=$(cat last_run_id.txt)
+            echo "Last saved run ID: $LAST_RUN_ID"
+            echo "LAST_RUN_ID=${LAST_RUN_ID}" >> $GITHUB_OUTPUT
           else
-            LAST_SHA=""
-            echo "No previous SHA found."
+            LAST_RUN_ID=""
+            echo "No previous run ID found."
+            echo "LAST_RUN_ID=${LAST_RUN_ID}" >> $GITHUB_OUTPUT
           fi
 
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
             echo "Manual trigger detected. Forcing release."
             echo "SHOULD_RELEASE=true" >> $GITHUB_OUTPUT
-          elif [ "$LATEST_SHA" == "$LAST_SHA" ]; then
-            echo "No new commits found. Canceling the workflow."
+          elif [ "$LATEST_RUN_ID" == "$LAST_RUN_ID" ]; then
+            echo "No new nightly builds found. Stopping workflow."
             echo "SHOULD_RELEASE=false" >> $GITHUB_OUTPUT
             exit 0
           else
-            echo "New commit found. Continuing workflow."
+            echo "New nightly build found. Continuing workflow."
             echo "SHOULD_RELEASE=true" >> $GITHUB_OUTPUT
           fi
 
-      - name: Save Current SHA for Next Run
+      - name: Save Current Run ID for Next Run
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
         run: |
-          echo "Saving LATEST_SHA=$LATEST_SHA to last_sha.txt"
-          cat latest_sha.txt > last_sha.txt
-          cat last_sha.txt
+          echo "Saving LATEST_RUN_ID=$LATEST_RUN_ID to last_run_id.txt"
+          cat latest_run_id.txt > last_run_id.txt
+          cat last_run_id.txt
 
-      - name: Upload Current SHA as Artifact
+      - name: Upload Current Run ID as an Artifact
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
         uses: actions/upload-artifact@v4
         with:
-          name: last-sha
-          path: last_sha.txt
-          retention-days: 7
+          name: last-run-id
+          path: last_run_id.txt
+          retention-days: 90
         env:
-          DEBUG_MESSAGE: "Uploading last-sha artifact"
+          DEBUG_MESSAGE: "Uploading last-run-id artifact"
 
       - name: Download Nightly Artifact
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
         id: download-artifact
         run: |
-          LATEST_RUN_ID=$(curl -H "Authorization: Bearer ${{ secrets.PAT_TOKEN }}" \
-                        -H "Accept: application/vnd.github+json" \
-                        https://api.github.com/repos/brahmkshatriya/echo/actions/workflows/nightly.yml/runs?status=success \
-                        | jq -r '.workflow_runs[0].id')
+          LATEST_RUN_ID=$(cat latest_run_id.txt)
           curl -H "Authorization: Bearer ${{ secrets.PAT_TOKEN }}" \
                -H "Accept: application/vnd.github+json" \
                https://api.github.com/repos/brahmkshatriya/echo/actions/runs/$LATEST_RUN_ID/artifacts \
@@ -135,16 +133,20 @@ jobs:
             exit 1
           fi
           
-          # Get commit SHA (already set in check-build)
-          echo "COMMIT_SHA=$LATEST_SHA" >> $GITHUB_ENV
+          # Get commit SHA from brahmkshatriya/echo
+          COMMIT_SHA=$(curl -H "Authorization: Bearer ${{ secrets.PAT_TOKEN }}" \
+                          -H "Accept: application/vnd.github+json" \
+                          https://api.github.com/repos/brahmkshatriya/echo/actions/runs/$LATEST_RUN_ID \
+                          | jq -r '.head_sha')
+          echo "COMMIT_SHA=$COMMIT_SHA" >> $GITHUB_ENV
           
           # Create shortened tag for release
-          SHORT_SHA=${LATEST_SHA:0:8}
+          SHORT_SHA=${COMMIT_SHA:0:8}
           echo "RELEASE_TAG=$SHORT_SHA" >> $GITHUB_ENV
           
-          # Get commit logs (fixed for single commit)
+          # Get commit logs
           REPO_URL="https://github.com/brahmkshatriya/echo"
-          COMMIT_LOGS=$(git log --pretty=format:"● %s ~%an [֍](${REPO_URL}/commit/%H)" -n 1 $LATEST_SHA || echo "● No commit details available")
+          COMMIT_LOGS=$(git log --pretty=format:"● %s ~%an [֍](${REPO_URL}/commit/%H)" --max-count=10 ${COMMIT_SHA}^..$COMMIT_SHA)
           if [ -z "$COMMIT_LOGS" ]; then
             COMMIT_LOGS="● No new commits for this release"
           fi
@@ -165,17 +167,20 @@ jobs:
         id: check-tag
         run: |
           echo "Checking if tag ${{ env.RELEASE_TAG }} exists in itsmechinmoy/echo"
-          RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.PAT_TOKEN }}" \
-                         -H "Accept: application/vnd.github+json" \
-                         https://api.github.com/repos/itsmechinmoy/echo/git/refs/tags/${{ env.RELEASE_TAG }})
-          echo "API Response: $RESPONSE"
-          if echo "$RESPONSE" | jq -e .ref > /dev/null; then
-            echo "Tag ${{ env.RELEASE_TAG }} already exists"
-            echo "TAG_EXISTS=true" >> $GITHUB_OUTPUT
-          else
-            echo "Tag ${{ env.RELEASE_TAG }} does not exist"
-            echo "TAG_EXISTS=false" >> $GITHUB_OUTPUT
-          fi
+          for i in {1..3}; do
+            RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.PAT_TOKEN }}" \
+                           -H "Accept: application/vnd.github+json" \
+                           https://api.github.com/repos/itsmechinmoy/echo/git/refs/tags/${{ env.RELEASE_TAG }})
+            if echo "$RESPONSE" | jq -e .ref > /dev/null; then
+              echo "Tag ${{ env.RELEASE_TAG }} already exists"
+              echo "TAG_EXISTS=true" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+            echo "Attempt $i failed. Retrying..."
+            sleep 2
+          done
+          echo "Tag ${{ env.RELEASE_TAG }} does not exist"
+          echo "TAG_EXISTS=false" >> $GITHUB_OUTPUT
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
 
@@ -183,17 +188,11 @@ jobs:
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' && steps.check-tag.outputs.TAG_EXISTS == 'true' }}
         run: |
           echo "Deleting existing tag ${{ env.RELEASE_TAG }} in itsmechinmoy/echo"
-          RESPONSE=$(curl -s -X DELETE \
+          curl -s -X DELETE \
                -H "Authorization: Bearer ${{ secrets.PAT_TOKEN }}" \
                -H "Accept: application/vnd.github+json" \
-               https://api.github.com/repos/itsmechinmoy/echo/git/refs/tags/${{ env.RELEASE_TAG }})
-          echo "Delete API Response: $RESPONSE"
-          if [ -z "$RESPONSE" ]; then
-            echo "Tag ${{ env.RELEASE_TAG }} deleted successfully"
-          else
-            echo "Failed to delete tag. Response: $RESPONSE"
-            exit 1
-          fi
+               https://api.github.com/repos/itsmechinmoy/echo/git/refs/tags/${{ env.RELEASE_TAG }}
+          echo "Tag ${{ env.RELEASE_TAG }} deleted"
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
 
@@ -252,7 +251,7 @@ jobs:
           prerelease: false
           token: ${{ secrets.PAT_TOKEN }}
           skipIfReleaseExists: false
-          omitBodyDuringUpdate: true
+          omitBodyDuringUpdate: false
           omitNameDuringUpdate: false
           omitPrereleaseDuringUpdate: false
           replacesArtifacts: false
