@@ -137,7 +137,7 @@ jobs:
           
           # Get commit logs
           REPO_URL="https://github.com/brahmkshatriya/echo"
-          COMMIT_LOGS=$(git log --pretty=format:"● %s ~%an [֍](${REPO_URL}/commit/%H)" --max-count=10 ${COMMIT_SHA}^..$COMMIT_SHA)
+          COMMIT_LOGS=$(git log --pretty=format:"● %s ~%an [֍>]((${REPO_URL}/commit/%H)" --max-count=10 ${COMMIT_SHA}^..$COMMIT_SHA)
           if [ -z "$COMMIT_LOGS" ]; then
             COMMIT_LOGS="● No new commits for this release"
           fi
@@ -152,6 +152,15 @@ jobs:
           
           echo "Commit log with checksums:"
           cat commit_log.txt
+
+      - name: Create Tag in itsmechinmoy/echo
+        if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
+        run: |
+          echo "Creating tag ${{ env.RELEASE_TAG }} in itsmechinmoy/echo"
+          git tag -f ${{ env.RELEASE_TAG }} ${{ env.COMMIT_SHA }}
+          git push origin ${{ env.RELEASE_TAG }} --force
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
 
       - name: Set up SSH for Codeberg and GitLab
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
@@ -190,6 +199,8 @@ jobs:
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
         uses: ncipollo/release-action@v1
         with:
+          owner: itsmechinmoy
+          repo: echo
           tag: ${{ env.RELEASE_TAG }}
           name: Echo ${{ env.RELEASE_TAG }}
           bodyFile: commit_log.txt
@@ -197,3 +208,6 @@ jobs:
           draft: false
           prerelease: true
           token: ${{ secrets.PAT_TOKEN }}
+          skipIfReleaseExists: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
