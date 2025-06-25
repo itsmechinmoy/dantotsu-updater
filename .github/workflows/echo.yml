@@ -130,6 +130,11 @@ jobs:
                           | jq -r '.head_sha')
           echo "COMMIT_SHA=$COMMIT_SHA" >> $GITHUB_ENV
           
+          # Create shortened tag for release
+          SHORT_SHA=${COMMIT_SHA:0:8}
+          RELEASE_TAG="nightly-$SHORT_SHA"
+          echo "RELEASE_TAG=$RELEASE_TAG" >> $GITHUB_ENV
+          
           # Get commit logs
           REPO_URL="https://github.com/brahmkshatriya/echo"
           COMMIT_LOGS=$(git log --pretty=format:"● %s ~%an [֍](${REPO_URL}/commit/%H)" --max-count=10 ${COMMIT_SHA}^..$COMMIT_SHA)
@@ -143,7 +148,7 @@ jobs:
           echo -e "### Checksums\n" >> commit_log.txt
           echo "| Variant | SHA-256 |" >> commit_log.txt
           echo "| ------- | ------- |" >> commit_log.txt
-          echo "| Universal | ${{ env.APK_SHA256 }} |" >> commit_log.txt
+          echo "| Universal | $SHA256 |" >> commit_log.txt
           
           echo "Commit log with checksums:"
           cat commit_log.txt
@@ -185,8 +190,8 @@ jobs:
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
         uses: ncipollo/release-action@v1
         with:
-          tag: ${{ env.COMMIT_SHA }}
-          name: Echo ${{ env.COMMIT_SHA }}
+          tag: ${{ env.RELEASE_TAG }}
+          name: Echo ${{ env.RELEASE_TAG }}
           bodyFile: commit_log.txt
           artifacts: app-release.apk
           draft: false
