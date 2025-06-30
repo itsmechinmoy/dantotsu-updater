@@ -169,6 +169,9 @@ jobs:
         run: |
           git remote add codeberg git@codeberg.org:itsmechinmoy/echo.git
           git fetch codeberg
+          # Rebase local main onto the latest from brahmkshatriya/echo
+          git fetch upstream
+          git rebase upstream/${{ env.COMMIT_SHA }} main
           git rm -f .github/workflows/echo.yml || echo "Not found"
           git commit -m "Remove workflow file for Codeberg sync" || echo "No changes"
           git push codeberg main --force
