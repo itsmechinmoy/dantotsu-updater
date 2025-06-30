@@ -169,8 +169,12 @@ jobs:
         run: |
           git remote add codeberg git@codeberg.org:itsmechinmoy/echo.git
           git rm -f .github/workflows/echo.yml || echo "Not found"
+          # Fetch the remote state to avoid shallow update issues
+          git fetch codeberg main
+          git checkout main
+          git pull --rebase codeberg main
           git commit -m "Remove workflow file for Codeberg sync" || echo "No changes"
-          git push codeberg main --force
+          git push codeberg main --force-with-lease
 
       - name: Prepare and push to GitLab
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
