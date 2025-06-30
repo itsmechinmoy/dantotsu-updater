@@ -137,15 +137,8 @@ jobs:
       - name: Fetch commit from brahmkshatriya/echo
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
         run: |
-          # Check if upstream exists, fetch the specific commit if it does
-          if git remote | grep -q upstream; then
-            git fetch upstream ${{ env.COMMIT_SHA }}
-          else
-            git remote add upstream https://github.com/brahmkshatriya/echo.git
-            git fetch upstream ${{ env.COMMIT_SHA }}
-          fi
-        env:
-          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
+          git remote add upstream https://github.com/brahmkshatriya/echo.git
+          git fetch upstream ${{ env.COMMIT_SHA }}
 
       - name: Create Tag in itsmechinmoy/echo
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
@@ -168,9 +161,6 @@ jobs:
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
         run: |
           git remote add codeberg git@codeberg.org:itsmechinmoy/echo.git
-          git fetch codeberg
-          git fetch upstream
-          git rebase ${{ env.COMMIT_SHA }} main
           git rm -f .github/workflows/echo.yml || echo "Not found"
           git commit -m "Remove workflow file for Codeberg sync" || echo "No changes"
           git push codeberg main --force
