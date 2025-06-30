@@ -126,7 +126,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
 
       - name: Delete Existing Tag
-        if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' && steps.check-tag.outputs.TAG_EXISTS == 'true' }}
+        if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' && steps.check-tag.outputs.TAG_EXISTS == 'true' && github.event_name != 'workflow_dispatch' }}
         run: |
           curl -s -X DELETE \
                -H "Authorization: Bearer ${{ secrets.PAT_TOKEN }}" \
@@ -141,7 +141,7 @@ jobs:
           git fetch upstream ${{ env.COMMIT_SHA }}
 
       - name: Create Tag in itsmechinmoy/echo
-        if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
+        if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' && steps.check-tag.outputs.TAG_EXISTS == 'false' }}
         run: |
           git tag -f ${{ env.RELEASE_TAG }} ${{ env.COMMIT_SHA }}
           git push origin ${{ env.RELEASE_TAG }} --force
@@ -180,7 +180,7 @@ jobs:
           git push gitlab main
 
       - name: Create or Update GitHub Release
-        if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' || (github.event_name == 'workflow_dispatch' && steps.check-tag.outputs.TAG_EXISTS == 'true') }}
+        if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
         uses: ncipollo/release-action@v1
         with:
           owner: itsmechinmoy
@@ -188,7 +188,7 @@ jobs:
           tag: ${{ env.RELEASE_TAG }}
           name: New Echo Nightly Released
           bodyFile: commit_log.txt
-          artifacts: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' && 'app-release.apk' || '' }}
+          artifacts: app-release.apk
           draft: false
           prerelease: false
           token: ${{ secrets.PAT_TOKEN }}
@@ -196,7 +196,7 @@ jobs:
           omitBodyDuringUpdate: false
           omitNameDuringUpdate: false
           omitPrereleaseDuringUpdate: false
-          replacesArtifacts: false
+          replacesArtifacts: true
           allowUpdates: true
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
