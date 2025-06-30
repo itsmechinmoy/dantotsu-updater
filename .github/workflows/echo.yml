@@ -99,10 +99,8 @@ jobs:
           SHORT_SHA=${COMMIT_SHA:0:8}
           echo "RELEASE_TAG=$SHORT_SHA" >> $GITHUB_ENV
           REPO_URL="https://github.com/brahmkshatriya/echo"
-          # Fetch the full history or at least the parent commit
-          git remote add upstream https://github.com/brahmkshatriya/echo.git
+          git remote get-url upstream || git remote add upstream https://github.com/brahmkshatriya/echo.git
           git fetch upstream --depth=1
-          # Use the fetched commit for log
           COMMIT_LOGS=$(git log -1 --pretty=format:"● %s ~%an [֍](${REPO_URL}/commit/%H)" $COMMIT_SHA || echo "")
           [ -z "$COMMIT_LOGS" ] && COMMIT_LOGS="● No new commits for this release"
           COMMIT_LOGS=$(echo "$COMMIT_LOGS" | sed -E "s@#([0-9]+)@[#\1](${REPO_URL}/pull/\1)@g")
@@ -137,7 +135,7 @@ jobs:
       - name: Fetch commit from brahmkshatriya/echo
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
         run: |
-          git remote add upstream https://github.com/brahmkshatriya/echo.git
+          git remote get-url upstream || git remote add upstream https://github.com/brahmkshatriya/echo.git
           git fetch upstream ${{ env.COMMIT_SHA }}
 
       - name: Create Tag in itsmechinmoy/echo
