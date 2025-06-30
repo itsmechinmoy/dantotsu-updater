@@ -99,7 +99,11 @@ jobs:
           SHORT_SHA=${COMMIT_SHA:0:8}
           echo "RELEASE_TAG=$SHORT_SHA" >> $GITHUB_ENV
           REPO_URL="https://github.com/brahmkshatriya/echo"
-          COMMIT_LOGS=$(git log --pretty=format:"● %s ~%an [֍](${REPO_URL}/commit/%H)" --max-count=10 ${COMMIT_SHA}^..$COMMIT_SHA || echo "")
+          # Fetch the full history or at least the parent commit
+          git remote add upstream https://github.com/brahmkshatriya/echo.git
+          git fetch upstream --depth=1
+          # Use the fetched commit for log
+          COMMIT_LOGS=$(git log -1 --pretty=format:"● %s ~%an [֍](${REPO_URL}/commit/%H)" $COMMIT_SHA || echo "")
           [ -z "$COMMIT_LOGS" ] && COMMIT_LOGS="● No new commits for this release"
           COMMIT_LOGS=$(echo "$COMMIT_LOGS" | sed -E "s@#([0-9]+)@[#\1](${REPO_URL}/pull/\1)@g")
           echo -e "Commits:\n" > commit_log.txt
@@ -130,7 +134,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
 
-      # 🧩 FIXED: Fetch commit from upstream before tagging
       - name: Fetch commit from brahmkshatriya/echo
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
         run: |
