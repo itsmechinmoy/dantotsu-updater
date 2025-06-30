@@ -158,6 +158,11 @@ jobs:
       - name: Prepare and push to Codeberg
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
         run: |
+          CURRENT_SHA=$(git rev-parse HEAD)
+          if [ "$CURRENT_SHA" = "${{ env.COMMIT_SHA }}" ]; then
+            echo "No changes compared to upstream; skipping Codeberg push."
+            exit 0
+          fi
           git remote add codeberg git@codeberg.org:itsmechinmoy/echo.git
           git rm -f .github/workflows/echo.yml || echo "Not found"
           git commit -m "Remove workflow file for Codeberg sync" || echo "No changes"
@@ -166,6 +171,11 @@ jobs:
       - name: Prepare and push to GitLab
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
         run: |
+          CURRENT_SHA=$(git rev-parse HEAD)
+          if [ "$CURRENT_SHA" = "${{ env.COMMIT_SHA }}" ]; then
+            echo "No changes compared to upstream; skipping GitLab push."
+            exit 0
+          fi
           git remote add gitlab git@gitlab.com:itsmechinmoy/echo.git
           git fetch gitlab
           git rm -f .github/workflows/echo.yml || echo "Not found"
