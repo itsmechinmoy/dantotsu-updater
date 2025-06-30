@@ -70,10 +70,12 @@ jobs:
             echo "LAST_COMMIT_SHA=${LAST_COMMIT_SHA}" >> $GITHUB_OUTPUT
           fi
 
-          if [ "$LATEST_COMMIT_SHA" == "$LAST_COMMIT_SHA" ]; then
+          if [ "$LATEST_COMMIT_SHA" == "$LAST_COMMIT_SHA" ] && [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
+            echo "No new commits in nightly build. Stopping workflow."
             echo "SHOULD_RELEASE=false" >> $GITHUB_OUTPUT
             exit 0
           else
+            echo "New commit or manual trigger detected. Continuing workflow."
             echo "SHOULD_RELEASE=true" >> $GITHUB_OUTPUT
           fi
 
@@ -99,10 +101,8 @@ jobs:
           SHORT_SHA=${COMMIT_SHA:0:8}
           echo "RELEASE_TAG=$SHORT_SHA" >> $GITHUB_ENV
           REPO_URL="https://github.com/brahmkshatriya/echo"
-          # Fetch the full history or at least the parent commit
           git remote add upstream https://github.com/brahmkshatriya/echo.git
           git fetch upstream --depth=1
-          # Use the fetched commit for log
           COMMIT_LOGS=$(git log -1 --pretty=format:"● %s ~%an [֍](${REPO_URL}/commit/%H)" $COMMIT_SHA || echo "")
           [ -z "$COMMIT_LOGS" ] && COMMIT_LOGS="● No new commits for this release"
           COMMIT_LOGS=$(echo "$COMMIT_LOGS" | sed -E "s@#([0-9]+)@[#\1](${REPO_URL}/pull/\1)@g")
@@ -180,7 +180,7 @@ jobs:
           git push gitlab main
 
       - name: Create or Update GitHub Release
-        if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
+        if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' || (github.event_name == 'workflow_dispatch' && steps.check-tag.outputs.TAG_EXISTS == 'true') }}
         uses: ncipollo/release-action@v1
         with:
           owner: itsmechinmoy
@@ -188,7 +188,7 @@ jobs:
           tag: ${{ env.RELEASE_TAG }}
           name: New Echo Nightly Released
           bodyFile: commit_log.txt
-          artifacts: app-release.apk
+          artifacts: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' && 'app-release.apk' || '' }}
           draft: false
           prerelease: false
           token: ${{ secrets.PAT_TOKEN }}
