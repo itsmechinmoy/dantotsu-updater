@@ -44,7 +44,13 @@ jobs:
                 {
                   title: "🎂 AnymeX Anniversary",
                   description: $desc,
-                  color: 16711858
+                  color: 0,
+                  thumbnail: {
+                    url: "https://cdn.discordapp.com/icons/1303000390505336893/d5c4b7afadec08e4c03e89cf997b5f6a.png"
+                  },
+                  image: {
+                    url: "https://media.tenor.com/g4LQl7KK1XcAAAAM/party.gif"
+                  }
                 }
               ]
             }')
