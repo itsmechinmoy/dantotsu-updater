@@ -1,0 +1,56 @@
+name: 🎂 AnymeX Birthday
+
+on:
+  # 00:00 IST on 6 Aug  → 18:30 UTC on 5 Aug
+  schedule:
+    - cron: '30 18 5 8 *'
+  workflow_dispatch:
+
+jobs:
+  announce:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Calculate current age
+        id: age
+        run: |
+          BIRTH_YEAR=2024
+          CURRENT_YEAR=$(TZ=Asia/Kolkata date +%Y)
+          AGE=$(( CURRENT_YEAR - BIRTH_YEAR ))
+
+          if [ "$AGE" -eq 1 ]; then
+            AGE_TEXT="${AGE} year old"
+          else
+            AGE_TEXT="${AGE} years old"
+          fi
+
+          echo "age_text=$AGE_TEXT" >> "$GITHUB_OUTPUT"
+
+      - name: Send Discord embed
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          AGE_TEXT: ${{ steps.age.outputs.age_text }}
+        run: |
+          CONTENT='||@everyone ||'
+
+          DESCRIPTION="[AnymeX](<https://github.com/RyanYuuki/AnymeX/>) is now ${AGE_TEXT} 🥳 \
+\nThe [initial commit](<https://github.com/RyanYuuki/AnymeX/commit/04dff6ede733f93363c0a38368fd3c2ee23a7407>) was done <t:1722882600:R> \
+\n\n[⭐️ Star](<https://github.com/RyanYuuki/AnymeX/>) the repo as a birthday gift 😚"
+
+          JSON=$(jq -Rn \
+            --arg content  "$CONTENT" \
+            --arg desc     "$DESCRIPTION" \
+            '{
+               content: $content,
+               embeds: [
+                 {
+                   title: "🎂 AnymeX Anniversary",
+                   description: $desc,
+                   color: 16711858
+                 }
+               ]
+             }')
+
+          curl -X POST -H "Content-Type: application/json" \
+               -d "$JSON" \
+               "$DISCORD_WEBHOOK_URL"
