@@ -1,7 +1,7 @@
 name: 🎂 AnymeX Birthday
 
 on:
-  # 00:00 IST on 6 Aug  →  18:30 UTC on 5 Aug
+  # 00 : 00 IST every 6 Aug  →  18 : 30 UTC every 5 Aug
   schedule:
     - cron: '30 18 5 8 *'
   workflow_dispatch:
@@ -11,6 +11,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # ──────────────────────────────────────────────────────────────
       - name: Calculate project age
         id: age
         run: |
@@ -26,6 +27,7 @@ jobs:
 
           echo "age_text=$AGE_TEXT" >> "$GITHUB_OUTPUT"
 
+      # ──────────────────────────────────────────────────────────────
       - name: Send Discord embed
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
@@ -33,31 +35,16 @@ jobs:
           AGE_TEXT="${{ steps.age.outputs.age_text }}"
           CONTENT='||@everyone ||'
 
-          # Build the description safely in a here-doc
-          DESCRIPTION=$(cat <<EOF
-[AnymeX](<https://github.com/RyanYuuki/AnymeX/>) is now ${AGE_TEXT} 🥳
-The [initial commit](<https://github.com/RyanYuuki/AnymeX/commit/04dff6ede733f93363c0a38368fd3c2ee23a7407>) was done <t:1722882600:R>
+          DESCRIPTION="[AnymeX](<https://github.com/RyanYuuki/AnymeX/>) is now ${AGE_TEXT} 🥳\nThe [initial commit](<https://github.com/RyanYuuki/AnymeX/commit/04dff6ede733f93363c0a38368fd3c2ee23a7407>) was done <t:1722882600:R>\n\n[⭐️ Star](<https://github.com/RyanYuuki/AnymeX/>) the repo as a birthday gift 😚"
 
-[⭐️ Star](<https://github.com/RyanYuuki/AnymeX/>) the repo as a birthday gift 😚
-EOF
-)
-
-          # Create embed JSON
           JSON=$(jq -n \
             --arg content "$CONTENT" \
-            --arg desc "$DESCRIPTION" \
+            --arg desc    "$DESCRIPTION" \
             '{
               content: $content,
-              embeds: [
-                {
-                  title: "🎂 AnymeX Anniversary",
-                  description: $desc,
-                  color: 16711858
-                }
-              ]
+              embeds: [ { title: "🎂 AnymeX Anniversary", description: $desc, color: 16711858 } ]
             }')
 
-          # Send to Discord
           curl -X POST -H "Content-Type: application/json" \
                -d "$JSON" \
                "$DISCORD_WEBHOOK_URL"
