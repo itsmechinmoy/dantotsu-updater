@@ -29,27 +29,29 @@ jobs:
       - name: Send Discord embed
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          AGE_TEXT: ${{ steps.age.outputs.age_text }}
         run: |
+          AGE_TEXT="${{ steps.age.outputs.age_text }}"
+
           CONTENT='||@everyone ||'
 
-          DESCRIPTION="[AnymeX](<https://github.com/RyanYuuki/AnymeX/>) is now ${AGE_TEXT} 🥳 \
-\nThe [initial commit](<https://github.com/RyanYuuki/AnymeX/commit/04dff6ede733f93363c0a38368fd3c2ee23a7407>) was done <t:1722882600:R> \
-\n\n[⭐️ Star](<https://github.com/RyanYuuki/AnymeX/>) the repo as a birthday gift 😚"
+          DESCRIPTION="[AnymeX](<https://github.com/RyanYuuki/AnymeX/>) is now ${AGE_TEXT} 🥳
+The [initial commit](<https://github.com/RyanYuuki/AnymeX/commit/04dff6ede733f93363c0a38368fd3c2ee23a7407>) was done <t:1722882600:R>
 
-          JSON=$(jq -Rn \
-            --arg content  "$CONTENT" \
-            --arg desc     "$DESCRIPTION" \
+[⭐️ Star](<https://github.com/RyanYuuki/AnymeX/>) the repo as a birthday gift 😚"
+
+          JSON=$(jq -n \
+            --arg content "$CONTENT" \
+            --arg desc "$DESCRIPTION" \
             '{
-               content: $content,
-               embeds: [
-                 {
-                   title: "🎂 AnymeX Anniversary",
-                   description: $desc,
-                   color: 16711858
-                 }
-               ]
-             }')
+              content: $content,
+              embeds: [
+                {
+                  title: "🎂 AnymeX Anniversary",
+                  description: $desc,
+                  color: 16711858
+                }
+              ]
+            }')
 
           curl -X POST -H "Content-Type: application/json" \
                -d "$JSON" \
