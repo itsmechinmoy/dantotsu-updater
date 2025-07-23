@@ -106,7 +106,8 @@ jobs:
           COMMIT_LOGS=$(echo "$COMMIT_LOGS" | sed -E "s@#([0-9]+)@[#\1](${REPO_URL}/pull/\1)@g")
           echo -e "Commits:\n" > commit_log.txt
           echo "$COMMIT_LOGS" | sed 's/●/\n●/g' | sed '/^$/d' >> commit_log.txt
-          echo -e "\n---\n### Checksums\n| Variant | SHA-256 |\n| ------- | ------- |\n| Universal | $SHA256 |" >> commit_log.txt
+          echo -e "\n---\n### Checksums\n| Variant | SHA-256 |\n| ------- | ------- |\n| Universal | $SHA256 |\n\n" >> commit_log.txt
+          echo -e "<img src=\"https://img.shields.io/github/downloads/itsmechinmoy/echo/total?style=for-the-badge&label=TOTAL%20DOWNLOADS&labelColor=black&color=white\"/>\n<img src=\"https://img.shields.io/github/downloads/itsmechinmoy/echo/$SHORT_SHA/total?style=for-the-badge&label=CURRENT%20RELEASE&labelColor=black&color=white\"/>" >> commit_log.txt
 
       - name: Check if Tag Exists
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
