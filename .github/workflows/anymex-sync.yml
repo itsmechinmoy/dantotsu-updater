@@ -44,10 +44,16 @@ jobs:
           git fetch origin "$DEFAULT_BRANCH"
           git checkout "$DEFAULT_BRANCH"
           git remote add codeberg git@codeberg.org:itsmechinmoy/anymex.git
-          git push codeberg "$DEFAULT_BRANCH" --force
+          git push codeberg "$DEFAULT_BRANCH:main" --force
 
       - name: Sync to GitLab
         run: |
+          DEFAULT_BRANCH=$(git remote show origin | grep 'HEAD branch' | awk '{print $NF}')
+          if [ -z "$DEFAULT_BRANCH" ]; then
+            echo "Error: Could not determine default branch. Repository might be empty."
+            exit 1
+          fi
+          echo "Default branch is $DEFAULT_BRANCH"
           git remote add gitlab git@gitlab.com:itsmechinmoy/anymex.git
           git fetch gitlab
-          git push gitlab "$DEFAULT_BRANCH" --force
+          git push gitlab "$DEFAULT_BRANCH:main" --force
