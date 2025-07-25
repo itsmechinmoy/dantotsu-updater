@@ -1,0 +1,53 @@
+name: Sync AnymeX Repository
+
+permissions:
+  contents: write
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  sync-repositories:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout RyanYuuki/AnymeX
+        uses: actions/checkout@v4
+        with:
+          repository: RyanYuuki/AnymeX
+          token: ${{ secrets.PAT_TOKEN }}
+          fetch-depth: 0
+
+      - name: Configure Git identity
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+
+      - name: Set up SSH for Codeberg and GitLab
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -t rsa codeberg.org >> ~/.ssh/known_hosts
+          ssh-keyscan -t rsa gitlab.com >> ~/.ssh/known_hosts
+
+      - name: Sync to Codeberg
+        run: |
+          DEFAULT_BRANCH=$(git remote show origin | grep 'HEAD branch' | awk '{print $NF}')
+          if [ -z "$DEFAULT_BRANCH" ]; then
+            echo "Error: Could not determine default branch. Repository might be empty."
+            exit 1
+          fi
+          echo "Default branch is $DEFAULT_BRANCH"
+          git fetch origin "$DEFAULT_BRANCH"
+          git checkout "$DEFAULT_BRANCH"
+          git remote add codeberg git@codeberg.org:itsmechinmoy/anymex.git
+          git push codeberg "$DEFAULT_BRANCH" --force
+
+      - name: Sync to GitLab
+        run: |
+          git remote add gitlab git@gitlab.com:itsmechinmoy/anymex.git
+          git fetch gitlab
+          git push gitlab "$DEFAULT_BRANCH" --force
