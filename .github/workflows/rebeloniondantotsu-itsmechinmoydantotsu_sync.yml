@@ -1,4 +1,4 @@
-name: Sync Self-host Dantotsu to GitHub
+name: Mirror rebelonion/Dantotsu dev -> itsmechinmoy/Dantotsu main
 
 on:
   push:
@@ -8,27 +8,24 @@ on:
   workflow_dispatch:
 
 jobs:
-  sync:
+  mirror:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout rebelonion/Dantotsu
+      - name: Clone rebelonion/Dantotsu dev branch
         run: |
-          git clone --branch dev https://git.rebelonion.dev/rebelonion/Dantotsu.git .
-          git fetch origin dev
-          git checkout dev
+          git clone --branch dev https://git.rebelonion.dev/rebelonion/Dantotsu.git dantotsu
+          cd dantotsu
 
       - name: Configure Git identity
         run: |
-          git config --global user.name "GitHub Actions"
-          git config --global user.email "actions@github.com"
+          cd dantotsu
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
 
-      - name: Prepare and push to GitHub
+      - name: Force push dev to your main
         env:
           GITHUB_PAT: ${{ secrets.DANTOTSU_SYNC }}
         run: |
-          git remote add github https://$GITHUB_PAT@github.com/itsmechinmoy/Dantotsu.git || echo "Remote already exists"
-          git fetch github
-          git checkout -B main
-          git rm -f .github/workflows/*.yml || echo "No workflow files present, continuing"
-          git commit -m "Sync from rebelonion/Dantotsu dev branch" || echo "No Face not present, continuing"
-          git push github main --force
+          cd dantotsu
+          git remote add github https://$GITHUB_PAT@github.com/itsmechinmoy/Dantotsu.git
+          git push github dev:main --force
