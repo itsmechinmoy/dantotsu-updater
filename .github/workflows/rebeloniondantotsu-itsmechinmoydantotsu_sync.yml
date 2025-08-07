@@ -1,4 +1,4 @@
-name: Sync Dantotsu to GitHub
+name: Sync Self-host Dantotsu to GitHub
 
 on:
   push:
@@ -28,10 +28,12 @@ jobs:
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -t rsa github.com >> ~/.ssh/known_hosts
+          eval $(ssh-agent -s)
+          ssh-add ~/.ssh/id_ed25519
 
       - name: Prepare and push to GitHub
         run: |
           git remote add github git@github.com:itsmechinmoy/Dantotsu.git
-          git rm -f .github/workflows/rebeloniondantotsu-itsmechinmoydantotsu_sync.yml || echo "File not present, continuing"
+          git rm -f .github/workflows/sync-to-github.yml || echo "File not present, continuing"
           git commit -m "Remove workflow file for GitHub sync" || echo "No changes to commit"
           git push github dev --force
