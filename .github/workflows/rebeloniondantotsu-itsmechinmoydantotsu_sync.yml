@@ -30,7 +30,7 @@ jobs:
           ssh-keyscan -t rsa github.com >> ~/.ssh/known_hosts
           eval $(ssh-agent -s)
           ssh-add ~/.ssh/id_ed25519
-          ssh -T git@github.com && echo "SSH connection successful" || { echo "SSH connection failed"; exit 1; }
+          ssh -T git@github.com | grep "Hi itsmechinmoy/Dantotsu" && echo "SSH connection successful" || { echo "SSH connection failed"; exit 1; }
 
       - name: Prepare and push to GitHub
         run: |
