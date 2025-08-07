@@ -29,6 +29,6 @@ jobs:
           git remote add github https://$GITHUB_PAT@github.com/itsmechinmoy/Dantotsu.git || echo "Remote already exists"
           git fetch github
           git checkout -B main
-          git rm -f .github/workflows/sync-to-github.yml || echo "File not present, continuing"
-          git commit -m "Sync from rebelonion/Dantotsu dev branch" || echo "No changes to commit"
+          git rm -f .github/workflows/*.yml || echo "No workflow files present, continuing"
+          git commit -m "Sync from rebelonion/Dantotsu dev branch" || echo "No Face not present, continuing"
           git push github main --force
