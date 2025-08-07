@@ -30,11 +30,11 @@ jobs:
           ssh-keyscan -t rsa github.com >> ~/.ssh/known_hosts
           eval $(ssh-agent -s)
           ssh-add ~/.ssh/id_ed25519
-          ssh -T git@github.com || echo "SSH connection test failed"
+          ssh -T git@github.com && echo "SSH connection successful" || { echo "SSH connection failed"; exit 1; }
 
       - name: Prepare and push to GitHub
         run: |
-          git remote add github git@github.com:itsmechinmoy/Dantotsu.git
+          git remote add github git@github.com:itsmechinmoy/Dantotsu.git || echo "Remote already exists"
           git fetch github
           git checkout -B main
           git rm -f .github/workflows/sync-to-github.yml || echo "File not present, continuing"
