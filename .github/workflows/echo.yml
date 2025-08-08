@@ -162,7 +162,7 @@ jobs:
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
         run: |
           git remote add codeberg git@codeberg.org:itsmechinmoy/echo.git
-          git rm -f .github/workflows/sync-echo.yml || echo "Not found"
+          git rm -f .github/workflows/echo.yml || echo "Not found"
           git commit -m "Remove workflow file for Codeberg sync" || echo "No changes"
           git push codeberg main --force
 
@@ -171,7 +171,7 @@ jobs:
         run: |
           git remote add gitlab git@gitlab.com:itsmechinmoy/echo.git
           git fetch gitlab
-          git rm -f .github/workflows/sync-echo.yml || echo "Not found"
+          git rm -f .github/workflows/echo.yml || echo "Not found"
           git commit -m "Remove workflow file for GitLab sync" || echo "No changes"
           git merge gitlab/main --allow-unrelated-histories -m "Merge gitlab state" || {
             git checkout origin/main -- .
