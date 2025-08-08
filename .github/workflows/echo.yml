@@ -45,7 +45,7 @@ jobs:
       - name: Download last run ID and commit SHA artifact
         uses: dawidd6/action-download-artifact@v6
         with:
-          workflow: echo.yml
+          workflow: sync-echo.yml
           name: last-sha
           path: .
         continue-on-error: true
@@ -77,6 +77,15 @@ jobs:
             echo "SHOULD_RELEASE=true" >> $GITHUB_OUTPUT
           fi
 
+      - name: Fetch and sync commits from brahmkshatriya/echo
+        if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
+        run: |
+          git remote add upstream https://github.com/brahmkshatriya/echo.git
+          git fetch upstream
+          git checkout main
+          git merge upstream/main --allow-unrelated-histories -m "Sync with brahmkshatriya/echo main"
+          git push origin main
+
       - name: Download Nightly Artifact
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
         id: download-artifact
@@ -99,7 +108,6 @@ jobs:
           SHORT_SHA=${COMMIT_SHA:0:8}
           echo "RELEASE_TAG=$SHORT_SHA" >> $GITHUB_ENV
           REPO_URL="https://github.com/brahmkshatriya/echo"
-          git remote get-url upstream || git remote add upstream https://github.com/brahmkshatriya/echo.git
           git fetch upstream --depth=1
           COMMIT_LOGS=$(git log -1 --pretty=format:"● %s ~%an [֍](${REPO_URL}/commit/%H)" $COMMIT_SHA || echo "")
           [ -z "$COMMIT_LOGS" ] && COMMIT_LOGS="● No new commits for this release"
@@ -133,12 +141,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
 
-      - name: Fetch commit from brahmkshatriya/echo
-        if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
-        run: |
-          git remote get-url upstream || git remote add upstream https://github.com/brahmkshatriya/echo.git
-          git fetch upstream ${{ env.COMMIT_SHA }}
-
       - name: Create Tag in itsmechinmoy/echo
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
         run: |
@@ -159,27 +161,17 @@ jobs:
       - name: Prepare and push to Codeberg
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
         run: |
-          CURRENT_SHA=$(git rev-parse HEAD)
-          if [ "$CURRENT_SHA" = "${{ env.COMMIT_SHA }}" ]; then
-            echo "No changes compared to upstream; skipping Codeberg push."
-            exit 0
-          fi
           git remote add codeberg git@codeberg.org:itsmechinmoy/echo.git
-          git rm -f .github/workflows/echo.yml || echo "Not found"
+          git rm -f .github/workflows/sync-echo.yml || echo "Not found"
           git commit -m "Remove workflow file for Codeberg sync" || echo "No changes"
           git push codeberg main --force
 
       - name: Prepare and push to GitLab
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
         run: |
-          CURRENT_SHA=$(git rev-parse HEAD)
-          if [ "$CURRENT_SHA" = "${{ env.COMMIT_SHA }}" ]; then
-            echo "No changes compared to upstream; skipping GitLab push."
-            exit 0
-          fi
           git remote add gitlab git@gitlab.com:itsmechinmoy/echo.git
           git fetch gitlab
-          git rm -f .github/workflows/echo.yml || echo "Not found"
+          git rm -f .github/workflows/sync-echo.yml || echo "Not found"
           git commit -m "Remove workflow file for GitLab sync" || echo "No changes"
           git merge gitlab/main --allow-unrelated-histories -m "Merge gitlab state" || {
             git checkout origin/main -- .
