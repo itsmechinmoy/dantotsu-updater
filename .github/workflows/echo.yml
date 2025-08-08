@@ -45,7 +45,7 @@ jobs:
       - name: Download last run ID and commit SHA artifact
         uses: dawidd6/action-download-artifact@v6
         with:
-          workflow: sync-echo.yml
+          workflow: echo.yml
           name: last-sha
           path: .
         continue-on-error: true
