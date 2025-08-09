@@ -25,6 +25,7 @@ jobs:
           git clone --branch dev https://git.rebelonion.dev/rebelonion/Dantotsu.git .
 
       - name: Download last SHA artifact
+        id: download-last-sha
         uses: dawidd6/action-download-artifact@v6
         with:
           repo: 'itsmechinmoy/Dantotsu-Builder'
@@ -37,7 +38,7 @@ jobs:
           DEBUG_MESSAGE: "No previous last-sha artifact found. This is expected on the first run or if previous runs failed."
 
       - name: Debug Missing Artifact
-        if: ${{ !steps.download-last-sha-artifact.outputs.artifact-found || !exists('last_sha.txt') }}
+        if: steps.download-last-sha.outcome != 'success'
         run: echo "$DEBUG_MESSAGE"
 
       - name: Check for updates
