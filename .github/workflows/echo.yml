@@ -27,7 +27,7 @@ jobs:
       - name: Fetch latest commit from brahmkshatriya/echo
         run: |
           git remote add upstream https://github.com/brahmkshatriya/echo.git
-          git fetch upstream
+          git fetch upstream --no-tags
           UPSTREAM_COMMIT_SHA=$(git rev-parse upstream/main)
           echo "UPSTREAM_COMMIT_SHA=$UPSTREAM_COMMIT_SHA" >> $GITHUB_OUTPUT
         id: fetch-upstream
@@ -75,7 +75,7 @@ jobs:
           workflow: echo.yml
           name: last-sha
           path: .
-          repo: itsmechinmoy/echo-nightly
+          repo: itsmechinmoy/dantotsu-updater
           if_no_artifact_found: warn
         continue-on-error: true
         env:
@@ -180,6 +180,7 @@ jobs:
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
         run: |
           git remote add codeberg git@codeberg.org:itsmechinmoy/echo.git
+          git fetch codeberg --no-tags
           git rm -f .github/workflows/echo.yml || echo "Workflow file not found, skipping"
           git commit -m "Remove workflow file for Codeberg sync" || echo "No changes to commit"
           git push codeberg main --force
@@ -190,7 +191,7 @@ jobs:
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
         run: |
           git remote add gitlab git@gitlab.com:itsmechinmoy/echo.git
-          git fetch gitlab
+          git fetch gitlab --no-tags
           git rm -f .github/workflows/echo.yml || echo "Workflow file not found, skipping"
           git commit -m "Remove workflow file for GitLab sync" || echo "No changes to commit"
           git merge gitlab/main --allow-unrelated-histories -m "Merge gitlab state" || {
