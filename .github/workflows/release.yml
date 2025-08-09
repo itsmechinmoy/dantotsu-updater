@@ -31,13 +31,13 @@ jobs:
           workflow: release.yml
           name: last-sha
           path: .
-          allow-forks: true  # Allow downloading artifacts even if the repo is detected as a fork
+          allow-forks: true
         continue-on-error: true
         env:
           DEBUG_MESSAGE: "No previous last-sha artifact found. This is expected on the first run or if previous runs failed."
 
       - name: Debug Missing Artifact
-        if: ${{ !file_exists('last_sha.txt') }}
+        if: ${{ !steps.download-last-sha-artifact.outputs.artifact-found || !exists('last_sha.txt') }}
         run: echo "$DEBUG_MESSAGE"
 
       - name: Check for updates
@@ -127,9 +127,7 @@ jobs:
         if: ${{ env.SKIP_BUILD != 'true' }}
         run: |
           echo "Adding split APK configuration to build.gradle..."
-          # Check if splits block already exists
           if ! grep -q "splits {" app/build.gradle; then
-            # Find the android block and add splits configuration
             sed -i '/android {/a\
             \    splits {\
             \        abi {\
@@ -143,8 +141,6 @@ jobs:
           else
             echo "Splits block already exists in build.gradle"
           fi
-          
-          # Show the modified section for verification
           echo "Modified build.gradle android block:"
           sed -n '/android {/,/^}/p' app/build.gradle | head -20
 
@@ -181,8 +177,6 @@ jobs:
         run: |
           echo "Listing all APK files in app/build/outputs/apk/google/release:"
           ls -la app/build/outputs/apk/google/release/
-          
-          # Check for universal APK (can be either name)
           if [ -f app/build/outputs/apk/google/release/app-google-universal-release.apk ]; then
             echo "✅ Universal APK found (app-google-universal-release.apk)"
             echo "UNIVERSAL_APK_EXISTS=true" >> $GITHUB_ENV
@@ -195,8 +189,6 @@ jobs:
             echo "❌ Universal APK not found!"
             echo "UNIVERSAL_APK_EXISTS=false" >> $GITHUB_ENV
           fi
-          
-          # Check for split APKs (exclude universal APK)
           SPLIT_APKS=$(find app/build/outputs/apk/google/release/ -name "app-google-*-release.apk" ! -name "app-google-universal-release.apk" ! -name "app-google-release.apk" 2>/dev/null || true)
           if [ -n "$SPLIT_APKS" ]; then
             echo "✅ Split APKs found:"
@@ -213,15 +205,11 @@ jobs:
         if: ${{ env.SKIP_BUILD != 'true' }}
         run: |
           echo "Calculating SHA256 checksums for APKs..."
-          
-          # Universal APK checksum
           if [ "$UNIVERSAL_APK_EXISTS" = "true" ]; then
             UNIVERSAL_SHA=$(sha256sum "app/build/outputs/apk/google/release/$UNIVERSAL_APK_NAME" | cut -d ' ' -f 1)
             echo "APK_UNIVERSAL_SHA=${UNIVERSAL_SHA}" >> $GITHUB_ENV
             echo "Universal APK SHA256: ${UNIVERSAL_SHA}"
           fi
-          
-          # Split APKs checksums
           if [ "$SPLIT_APKS_EXIST" = "true" ]; then
             echo "Split APK checksums:"
             find app/build/outputs/apk/google/release/ -name "app-google-*-release.apk" ! -name "app-google-universal-release.apk" ! -name "app-google-release.apk" | while read apk; do
@@ -240,13 +228,10 @@ jobs:
           echo -e "### Checksums\n" >> commit_log.txt
           echo "| Variant | SHA-256 |" >> commit_log.txt
           echo "| ------- | ------- |" >> commit_log.txt
-          
           if [ "$UNIVERSAL_APK_EXISTS" = "true" ]; then
             echo "| Universal | ${{ env.APK_UNIVERSAL_SHA }} |" >> commit_log.txt
           fi
-          
           if [ "$SPLIT_APKS_EXIST" = "true" ]; then
-            # Add split APK checksums to table
             find app/build/outputs/apk/google/release/ -name "app-google-*-release.apk" ! -name "app-google-universal-release.apk" ! -name "app-google-release.apk" | while read apk; do
               BASENAME=$(basename "$apk" .apk)
               ABI=$(echo "$BASENAME" | sed 's/app-google-//' | sed 's/-release//')
@@ -254,7 +239,6 @@ jobs:
               echo "| ${ABI} | ${SHA} |" >> commit_log.txt
             done
           fi
-          
           echo "Updated commit_log.txt with checksums:"
           cat commit_log.txt
         shell: bash
