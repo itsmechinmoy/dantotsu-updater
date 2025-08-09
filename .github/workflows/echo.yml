@@ -146,7 +146,7 @@ jobs:
           else
             echo "TAG_EXISTS=false" >> $GITHUB_OUTPUT
           fi
-       	env:
+        env:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
 
       - name: Delete Existing Tag
@@ -156,7 +156,7 @@ jobs:
                -H "Authorization: Bearer ${{ secrets.PAT_TOKEN }}" \
                https://api.github.com/repos/itsmechinmoy/echo-nightly/git/refs/tags/${{ env.RELEASE_TAG }}
         env:
-          GITHUB_TOKEN: ${{ secrets3352 PAT_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
 
       - name: Create Tag in itsmechinmoy/echo-nightly
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
