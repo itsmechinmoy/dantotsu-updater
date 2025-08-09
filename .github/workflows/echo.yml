@@ -76,6 +76,7 @@ jobs:
           name: last-sha
           path: .
           repo: itsmechinmoy/echo-nightly
+          if_no_artifact_found: warn
         continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
@@ -178,24 +179,28 @@ jobs:
       - name: Prepare and push to Codeberg
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
         run: |
-          git remote add codeberg git@codeberg.org:itsmechinmoy/echo-nightly.git
-          git rm -f .github/workflows/echo.yml || echo "Not found"
-          git commit -m "Remove workflow file for Codeberg sync" || echo "No changes"
+          git remote add codeberg git@codeberg.org:itsmechinmoy/echo.git
+          git rm -f .github/workflows/echo.yml || echo "Workflow file not found, skipping"
+          git commit -m "Remove workflow file for Codeberg sync" || echo "No changes to commit"
           git push codeberg main --force
+        env:
+          GIT_SSH_COMMAND: ssh -i ~/.ssh/id_ed25519
 
       - name: Prepare and push to GitLab
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
         run: |
-          git remote add gitlab git@gitlab.com:itsmechinmoy/echo-nightly.git
+          git remote add gitlab git@gitlab.com:itsmechinmoy/echo.git
           git fetch gitlab
-          git rm -f .github/workflows/echo.yml || echo "Not found"
-          git commit -m "Remove workflow file for GitLab sync" || echo "No changes"
+          git rm -f .github/workflows/echo.yml || echo "Workflow file not found, skipping"
+          git commit -m "Remove workflow file for GitLab sync" || echo "No changes to commit"
           git merge gitlab/main --allow-unrelated-histories -m "Merge gitlab state" || {
             git checkout origin/main -- .
             git add .
             git commit -m "Resolved GitLab merge conflict by keeping GitHub state"
           }
           git push gitlab main
+        env:
+          GIT_SSH_COMMAND: ssh -i ~/.ssh/id_ed25519
 
       - name: Create or Update GitHub Release
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
