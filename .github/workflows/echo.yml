@@ -126,13 +126,11 @@ jobs:
           SHORT_SHA=${COMMIT_SHA:0:8}
           echo "RELEASE_TAG=$SHORT_SHA" >> $GITHUB_ENV
 
-          # Fetch enough history to ensure commit exists
           REPO_URL="https://github.com/brahmkshatriya/echo"
           git fetch upstream --depth=50
           COMMIT_LOGS=$(git log -1 --pretty=format:"● %s ~%an [֍](${REPO_URL}/commit/%H)" $COMMIT_SHA || echo "")
           [ -z "$COMMIT_LOGS" ] && COMMIT_LOGS="● No new commits for this release"
 
-          # Write commit_log.txt safely
           echo -e "Commits:\n" > commit_log.txt
           echo "$COMMIT_LOGS" | sed 's/●/\n●/g' | sed '/^$/d' >> commit_log.txt
           echo -e "\n---\n### Checksums\n| Variant | SHA-256 |\n| ------- | ------- |\n| Universal | $SHA256 |\n\n" >> commit_log.txt
@@ -145,29 +143,7 @@ jobs:
             echo -e "\n---\n### Checksums\n| Variant | SHA-256 |\n| ------- | ------- |\n| Universal | $APK_SHA256 |\n" >> commit_log.txt
           fi
 
-      # ✅ Release step moved up here (before Codeberg/GitLab sync)
-      - name: Create or Update GitHub Release
-        if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
-        uses: ncipollo/release-action@v1
-        with:
-          owner: itsmechinmoy
-          repo: echo-nightly
-          tag: ${{ env.RELEASE_TAG }}
-          name: New Echo Nightly Released
-          bodyFile: commit_log.txt
-          artifacts: app-release.apk
-          draft: false
-          prerelease: false
-          token: ${{ secrets.PAT_TOKEN }}
-          skipIfReleaseExists: false
-          omitBodyDuringUpdate: false
-          omitNameDuringUpdate: false
-          omitPrereleaseDuringUpdate: false
-          replacesArtifacts: false
-          allowUpdates: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
-
+      # ✅ FIX: Tag management BEFORE release
       - name: Check if Tag Exists
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
         id: check-tag
@@ -197,6 +173,29 @@ jobs:
         run: |
           git tag -f ${{ env.RELEASE_TAG }} ${{ env.COMMIT_SHA }}
           git push origin ${{ env.RELEASE_TAG }} --force
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
+
+      # ✅ Release AFTER tag is created
+      - name: Create or Update GitHub Release
+        if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
+        uses: ncipollo/release-action@v1
+        with:
+          owner: itsmechinmoy
+          repo: echo-nightly
+          tag: ${{ env.RELEASE_TAG }}
+          name: New Echo Nightly Released
+          bodyFile: commit_log.txt
+          artifacts: app-release.apk
+          draft: false
+          prerelease: false
+          token: ${{ secrets.PAT_TOKEN }}
+          skipIfReleaseExists: false
+          omitBodyDuringUpdate: false
+          omitNameDuringUpdate: false
+          omitPrereleaseDuringUpdate: false
+          replacesArtifacts: false
+          allowUpdates: true
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
 
