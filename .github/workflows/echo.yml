@@ -145,7 +145,7 @@ jobs:
             echo -e "\n---\n### Checksums\n| Variant | SHA-256 |\n| ------- | ------- |\n| Universal | $APK_SHA256 |\n" >> commit_log.txt
           fi
 
-      # 🔥 Moved up here (before Codeberg/GitLab sync)
+      # ✅ Release step moved up here (before Codeberg/GitLab sync)
       - name: Create or Update GitHub Release
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
         uses: ncipollo/release-action@v1
