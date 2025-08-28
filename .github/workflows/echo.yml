@@ -125,15 +125,25 @@ jobs:
           echo "COMMIT_SHA=$COMMIT_SHA" >> $GITHUB_ENV
           SHORT_SHA=${COMMIT_SHA:0:8}
           echo "RELEASE_TAG=$SHORT_SHA" >> $GITHUB_ENV
+
+          # Fetch enough history to ensure commit exists
           REPO_URL="https://github.com/brahmkshatriya/echo"
-          git fetch upstream --depth=1
+          git fetch upstream --depth=50
           COMMIT_LOGS=$(git log -1 --pretty=format:"● %s ~%an [֍](${REPO_URL}/commit/%H)" $COMMIT_SHA || echo "")
           [ -z "$COMMIT_LOGS" ] && COMMIT_LOGS="● No new commits for this release"
-          COMMIT_LOGS=$(echo "$COMMIT_LOGS" | sed -E "s@#([0-9]+)@[#\1](${REPO_URL}/pull/\1)@g")
+
+          # Write commit_log.txt safely
           echo -e "Commits:\n" > commit_log.txt
           echo "$COMMIT_LOGS" | sed 's/●/\n●/g' | sed '/^$/d' >> commit_log.txt
           echo -e "\n---\n### Checksums\n| Variant | SHA-256 |\n| ------- | ------- |\n| Universal | $SHA256 |\n\n" >> commit_log.txt
           echo -e "<img src=\"https://img.shields.io/github/downloads/itsmechinmoy/echo-nightly/total?style=for-the-badge&label=TOTAL%20DOWNLOADS&labelColor=black&color=white\"/> <img src=\"https://img.shields.io/github/downloads/itsmechinmoy/echo-nightly/$SHORT_SHA/total?style=for-the-badge&label=CURRENT%20RELEASE&labelColor=black&color=white\"/>" >> commit_log.txt
+
+      - name: Ensure commit_log.txt exists
+        run: |
+          if [ ! -f commit_log.txt ]; then
+            echo "● No commit logs available" > commit_log.txt
+            echo -e "\n---\n### Checksums\n| Variant | SHA-256 |\n| ------- | ------- |\n| Universal | $APK_SHA256 |\n" >> commit_log.txt
+          fi
 
       - name: Check if Tag Exists
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
@@ -193,7 +203,9 @@ jobs:
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
         run: |
           git remote add gitlab git@gitlab.com:itsmechinmoy/echo.git
+          git fetch --unshallow origin || true
           git fetch gitlab --no-tags
+          git clean -fdx
           git rm -f .github/workflows/echo.yml || echo "Workflow file not found, skipping"
           git commit -m "Remove workflow file for GitLab sync" || echo "No changes to commit"
           git merge gitlab/main --allow-unrelated-histories -m "Merge gitlab state" || {
