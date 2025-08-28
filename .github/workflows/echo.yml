@@ -129,34 +129,71 @@ jobs:
             echo "● No commit logs available" > commit_log.txt
             echo -e "\n---\n### Checksums\n| Variant | SHA-256 |\n| ------- | ------- |\n| Universal | $APK_SHA256 |\n" >> commit_log.txt
           fi
+      - name: Debug Release Creation
+        if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
+        run: |
+          echo "Checking PAT_TOKEN permissions"
+          curl -s -H "Authorization: Bearer ${{ secrets.PAT_TOKEN }}" \
+               -H "Accept: application/vnd.github+json" \
+               https://api.github.com/user | jq .
+          echo "Checking repository releases endpoint"
+          RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.PAT_TOKEN }}" \
+                         -H "Accept: application/vnd.github+json" \
+                         https://api.github.com/repos/itsmechinmoy/echo-nightly/releases)
+          echo "Releases API response: $RESPONSE"
       - name: Create or Update GitHub Release
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
         run: |
           RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.PAT_TOKEN }}" \
                          -H "Accept: application/vnd.github+json" \
                          https://api.github.com/repos/itsmechinmoy/echo-nightly/releases)
+          if [[ $(echo "$RESPONSE" | jq -r '.message // empty') == "Not Found" ]]; then
+            echo "No releases found, proceeding to create a new one"
+            RESPONSE="[]"
+          elif [[ -z "$RESPONSE" || "$RESPONSE" == "null" ]]; then
+            echo "Invalid releases API response, exiting"
+            exit 1
+          fi
           RELEASE_ID=$(echo "$RESPONSE" | jq -r --arg sha "${{ env.COMMIT_SHA }}" '.[] | select(.target_commitish == $sha) | .id')
           BODY=$(cat commit_log.txt | jq -sR .)
           if [ -n "$RELEASE_ID" ]; then
-            curl -s -X PATCH \
-                 -H "Authorization: Bearer ${{ secrets.PAT_TOKEN }}" \
-                 -H "Accept: application/vnd.github+json" \
-                 https://api.github.com/repos/itsmechinmoy/echo-nightly/releases/$RELEASE_ID \
-                 -d "{\"target_commitish\":\"${{ env.COMMIT_SHA }}\",\"name\":\"New Echo Nightly Released\",\"body\":$BODY,\"draft\":false,\"prerelease\":false}"
+            echo "Updating existing release ID: $RELEASE_ID"
+            UPDATE_RESPONSE=$(curl -s -X PATCH \
+                                   -H "Authorization: Bearer ${{ secrets.PAT_TOKEN }}" \
+                                   -H "Accept: application/vnd.github+json" \
+                                   https://api.github.com/repos/itsmechinmoy/echo-nightly/releases/$RELEASE_ID \
+                                   -d "{\"target_commitish\":\"${{ env.COMMIT_SHA }}\",\"name\":\"New Echo Nightly Released\",\"body\":$BODY,\"draft\":false,\"prerelease\":false}")
+            echo "Update release response: $UPDATE_RESPONSE"
+            if [[ $(echo "$UPDATE_RESPONSE" | jq -r '.message // empty') ]]; then
+              echo "Failed to update release: $UPDATE_RESPONSE"
+              exit 1
+            fi
           else
+            echo "Creating new release for commit ${{ env.COMMIT_SHA }}"
             RELEASE_RESPONSE=$(curl -s -X POST \
                                    -H "Authorization: Bearer ${{ secrets.PAT_TOKEN }}" \
                                    -H "Accept: application/vnd.github+json" \
                                    https://api.github.com/repos/itsmechinmoy/echo-nightly/releases \
                                    -d "{\"target_commitish\":\"${{ env.COMMIT_SHA }}\",\"name\":\"New Echo Nightly Released\",\"body\":$BODY,\"draft\":false,\"prerelease\":false}")
-            RELEASE_ID=$(echo "$RELEASE_RESPONSE" | jq -r .id)
+            echo "Create release response: $RELEASE_RESPONSE"
+            RELEASE_ID=$(echo "$RELEASE_RESPONSE" | jq -r '.id')
+            if [[ -z "$RELEASE_ID" || "$RELEASE_ID" == "null" ]]; then
+              echo "Failed to create release: $RELEASE_RESPONSE"
+              exit 1
+            fi
           fi
-          curl -s -X POST \
-               -H "Authorization: Bearer ${{ secrets.PAT_TOKEN }}" \
-               -H "Accept: application/vnd.github+json" \
-               -H "Content-Type: application/vnd.android.package-archive" \
-               --data-binary "@${{ env.APK_FILE }}" \
-               https://uploads.github.com/repos/itsmechinmoy/echo-nightly/releases/$RELEASE_ID/assets?name=${{ env.APK_FILE }}
+          echo "Uploading APK to release ID: $RELEASE_ID"
+          UPLOAD_RESPONSE=$(curl -s -X POST \
+                                -H "Authorization: Bearer ${{ secrets.PAT_TOKEN }}" \
+                                -H "Accept: application/vnd.github+json" \
+                                -H "Content-Type: application/vnd.android.package-archive" \
+                                --data-binary "@${{ env.APK_FILE }}" \
+                                https://uploads.github.com/repos/itsmechinmoy/echo-nightly/releases/$RELEASE_ID/assets?name=${{ env.APK_FILE }})
+          echo "Upload APK response: $UPLOAD_RESPONSE"
+          if [[ $(echo "$UPLOAD_RESPONSE" | jq -r '.message // empty') ]]; then
+            echo "Failed to upload APK: $UPLOAD_RESPONSE"
+            exit 1
+          fi
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
       - name: Save and Upload last-sha for future runs
