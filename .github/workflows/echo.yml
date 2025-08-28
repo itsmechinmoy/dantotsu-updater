@@ -211,10 +211,9 @@ jobs:
       - name: Prepare and push to Codeberg
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
         run: |
-          # Store files we need to preserve
-          TEMP_DIR="temp-codeberg-$GITHUB_RUN_ID"
-          mkdir -p "$TEMP_DIR"
-          cp last_run_id.txt last_commit_sha.txt "$TEMP_DIR/"
+          # Store files we need to preserve outside git directory
+          mkdir -p /tmp/preserve-$GITHUB_RUN_ID
+          cp last_run_id.txt last_commit_sha.txt /tmp/preserve-$GITHUB_RUN_ID/
           
           git remote add codeberg git@codeberg.org:itsmechinmoy/echo.git || true
           git fetch --unshallow origin || true
@@ -228,8 +227,8 @@ jobs:
           git push codeberg main --force
           
           # Restore preserved files
-          cp "$TEMP_DIR/last_run_id.txt" "$TEMP_DIR/last_commit_sha.txt" .
-          rm -rf "$TEMP_DIR"
+          cp /tmp/preserve-$GITHUB_RUN_ID/last_run_id.txt /tmp/preserve-$GITHUB_RUN_ID/last_commit_sha.txt .
+          rm -rf /tmp/preserve-$GITHUB_RUN_ID
         env:
           GIT_SSH_COMMAND: ssh -i ~/.ssh/id_ed25519
       - name: Prepare and push to GitLab
