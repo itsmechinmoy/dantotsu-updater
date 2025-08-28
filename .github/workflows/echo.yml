@@ -149,7 +149,7 @@ jobs:
                                    -H "Authorization: Bearer ${{ secrets.PAT_TOKEN }}" \
                                    -H "Accept: application/vnd.github+json" \
                                    https://api.github.com/repos/itsmechinmoy/echo-nightly/releases/$RELEASE_ID \
-                                   -d "{\"tag_name\":\"${{ env.TAG_NAME }}\",\"target_commitish\":\"${{ env.COMMIT_SHA }}\",\"name\":\"Echo Nightly ${{ env.TAG_NAME }}\",\"body\":$BODY,\"draft\":false,\"prerelease\":true}")
+                                   -d "{\"tag_name\":\"${{ env.TAG_NAME }}\",\"target_commitish\":\"${{ env.COMMIT_SHA }}\",\"name\":\"New Echo Nightly Released\",\"body\":$BODY,\"draft\":false,\"prerelease\":false}")
             if [[ $(echo "$UPDATE_RESPONSE" | jq -r '.id // empty') == "empty" ]]; then
               echo "Failed to update release: $UPDATE_RESPONSE"
               exit 1
@@ -161,7 +161,7 @@ jobs:
                                    -H "Authorization: Bearer ${{ secrets.PAT_TOKEN }}" \
                                    -H "Accept: application/vnd.github+json" \
                                    https://api.github.com/repos/itsmechinmoy/echo-nightly/releases \
-                                   -d "{\"tag_name\":\"${{ env.TAG_NAME }}\",\"target_commitish\":\"${{ env.COMMIT_SHA }}\",\"name\":\"Echo Nightly ${{ env.TAG_NAME }}\",\"body\":$BODY,\"draft\":false,\"prerelease\":true}")
+                                   -d "{\"tag_name\":\"${{ env.TAG_NAME }}\",\"target_commitish\":\"${{ env.COMMIT_SHA }}\",\"name\":\"New Echo Nightly Released\",\"body\":$BODY,\"draft\":false,\"prerelease\":false}")
             FINAL_RELEASE_ID=$(echo "$RELEASE_RESPONSE" | jq -r '.id')
             if [[ -z "$FINAL_RELEASE_ID" || "$FINAL_RELEASE_ID" == "null" ]]; then
               echo "Failed to create release: $RELEASE_RESPONSE"
