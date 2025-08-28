@@ -115,6 +115,7 @@ jobs:
           echo "APK_SHA256=$SHA256" >> $GITHUB_ENV
           echo "COMMIT_SHA=$COMMIT_SHA" >> $GITHUB_ENV
           echo "SHORT_SHA=$SHORT_SHA" >> $GITHUB_ENV
+          echo "RELEASE_TAG=${SHORT_SHA}-${{ github.run_id }}" >> $GITHUB_ENV
           REPO_URL="https://github.com/brahmkshatriya/echo"
           git fetch upstream --depth=50
           COMMIT_LOGS=$(git log -1 --pretty=format:"● %s ~%an [֍](${REPO_URL}/commit/%H)" $COMMIT_SHA || echo "")
@@ -122,18 +123,26 @@ jobs:
           echo -e "Commits:\n" > commit_log.txt
           echo "$COMMIT_LOGS" | sed 's/●/\n●/g' | sed '/^$/d' >> commit_log.txt
           echo -e "\n---\n### Checksums\n| Variant | SHA-256 |\n| ------- | ------- |\n| Universal | $SHA256 |\n\n" >> commit_log.txt
-          echo -e "<img src=\"https://img.shields.io/github/downloads/itsmechinmoy/echo-nightly/total?style=for-the-badge&label=TOTAL%20DOWNLOADS&labelColor=black&color=white\"/>" >> commit_log.txt
+          echo -e "<img src=\"https://img.shields.io/github/downloads/itsmechinmoy/echo-nightly/total?style=for-the-badge&label=TOTAL%20DOWNLOADS&labelColor=black&color=white\"/> <img src=\"https://img.shields.io/github/downloads/itsmechinmoy/echo-nightly/${SHORT_SHA}-${{ github.run_id }}/total?style=for-the-badge&label=CURRENT%20RELEASE&labelColor=black&color=white\"/>" >> commit_log.txt
       - name: Ensure commit_log.txt exists
         run: |
           if [ ! -f commit_log.txt ]; then
             echo "● No commit logs available" > commit_log.txt
             echo -e "\n---\n### Checksums\n| Variant | SHA-256 |\n| ------- | ------- |\n| Universal | $APK_SHA256 |\n" >> commit_log.txt
           fi
+      - name: Create Tag in itsmechinmoy/echo-nightly
+        if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
+        run: |
+          git tag -f ${{ env.RELEASE_TAG }} ${{ env.COMMIT_SHA }}
+          git push origin ${{ env.RELEASE_TAG }} --force
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
       - name: Create or Update GitHub Release
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
         uses: softprops/action-gh-release@v2
         with:
           repository: itsmechinmoy/echo-nightly
+          tag_name: ${{ env.RELEASE_TAG }}
           target_commitish: ${{ env.COMMIT_SHA }}
           name: New Echo Nightly Released (${{ env.SHORT_SHA }})
           body_path: commit_log.txt
