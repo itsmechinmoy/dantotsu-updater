@@ -1,13 +1,10 @@
 name: Sync Echo and Create Releases
-
 permissions:
   contents: write
-
 on:
   schedule:
-    - cron: '*/30 * * * *'  # Runs every 30 minutes
+    - cron: '*/30 * * * *' # Runs every 30 minutes
   workflow_dispatch:
-
 jobs:
   sync-and-release:
     runs-on: ubuntu-latest
@@ -18,12 +15,10 @@ jobs:
           repository: itsmechinmoy/echo-nightly
           token: ${{ secrets.PAT_TOKEN }}
           fetch-depth: 0
-
       - name: Configure Git identity
         run: |
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
-
       - name: Fetch latest commit from brahmkshatriya/echo
         run: |
           git remote add upstream https://github.com/brahmkshatriya/echo.git
@@ -31,7 +26,6 @@ jobs:
           UPSTREAM_COMMIT_SHA=$(git rev-parse upstream/main)
           echo "UPSTREAM_COMMIT_SHA=$UPSTREAM_COMMIT_SHA" >> $GITHUB_OUTPUT
         id: fetch-upstream
-
       - name: Check for new commits
         id: check-commits
         run: |
@@ -41,14 +35,12 @@ jobs:
           else
             echo "SHOULD_SYNC=false" >> $GITHUB_OUTPUT
           fi
-
       - name: Sync commits from brahmkshatriya/echo
         if: ${{ steps.check-commits.outputs.SHOULD_SYNC == 'true' }}
         run: |
           git checkout main
           git merge upstream/main --allow-unrelated-histories -m "Sync with brahmkshatriya/echo main"
           git push origin main
-
       - name: Check for new nightly build
         id: check-build
         run: |
@@ -68,7 +60,6 @@ jobs:
           echo "$LATEST_RUN_ID" > latest_run_id.txt
           echo "$LATEST_COMMIT_SHA" > latest_commit_sha.txt
           echo "SHOULD_RELEASE=true" >> $GITHUB_OUTPUT
-
       - name: Download last run ID and commit SHA artifact
         uses: dawidd6/action-download-artifact@v6
         with:
@@ -80,7 +71,6 @@ jobs:
         continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
-
       - name: Check if new nightly build exists
         id: compare
         if: ${{ steps.check-build.outputs.SHOULD_RELEASE == 'true' }}
@@ -103,7 +93,6 @@ jobs:
           else
             echo "SHOULD_RELEASE=true" >> $GITHUB_OUTPUT
           fi
-
       - name: Download Nightly Artifact
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
         id: download-artifact
@@ -118,32 +107,30 @@ jobs:
           unzip artifact.zip -d artifact_contents
           APK_FILE=$(find artifact_contents -name "*.apk" | head -1)
           if [ -z "$APK_FILE" ]; then echo "No APK found"; exit 1; fi
-          mv "$APK_FILE" app-release.apk
-          SHA256=$(sha256sum app-release.apk | awk '{print $1}')
-          echo "APK_SHA256=$SHA256" >> $GITHUB_ENV
+          # FIX: Rename to unique name to avoid "already_exists" on updates
           COMMIT_SHA=$(cat latest_commit_sha.txt)
-          echo "COMMIT_SHA=$COMMIT_SHA" >> $GITHUB_ENV
           SHORT_SHA=${COMMIT_SHA:0:8}
+          mv "$APK_FILE" "Echo-Nightly-${SHORT_SHA}.apk"
+          SHA256=$(sha256sum "Echo-Nightly-${SHORT_SHA}.apk" | awk '{print $1}')
+          echo "APK_FILE=Echo-Nightly-${SHORT_SHA}.apk" >> $GITHUB_ENV
+          echo "APK_SHA256=$SHA256" >> $GITHUB_ENV
+          echo "COMMIT_SHA=$COMMIT_SHA" >> $GITHUB_ENV
           echo "RELEASE_TAG=$SHORT_SHA" >> $GITHUB_ENV
-
           REPO_URL="https://github.com/brahmkshatriya/echo"
           git fetch upstream --depth=50
           COMMIT_LOGS=$(git log -1 --pretty=format:"● %s ~%an [֍](${REPO_URL}/commit/%H)" $COMMIT_SHA || echo "")
           [ -z "$COMMIT_LOGS" ] && COMMIT_LOGS="● No new commits for this release"
-
           echo -e "Commits:\n" > commit_log.txt
           echo "$COMMIT_LOGS" | sed 's/●/\n●/g' | sed '/^$/d' >> commit_log.txt
           echo -e "\n---\n### Checksums\n| Variant | SHA-256 |\n| ------- | ------- |\n| Universal | $SHA256 |\n\n" >> commit_log.txt
           echo -e "<img src=\"https://img.shields.io/github/downloads/itsmechinmoy/echo-nightly/total?style=for-the-badge&label=TOTAL%20DOWNLOADS&labelColor=black&color=white\"/> <img src=\"https://img.shields.io/github/downloads/itsmechinmoy/echo-nightly/$SHORT_SHA/total?style=for-the-badge&label=CURRENT%20RELEASE&labelColor=black&color=white\"/>" >> commit_log.txt
-
       - name: Ensure commit_log.txt exists
         run: |
           if [ ! -f commit_log.txt ]; then
+            # FIX: Use env var for renamed file in fallback
             echo "● No commit logs available" > commit_log.txt
             echo -e "\n---\n### Checksums\n| Variant | SHA-256 |\n| ------- | ------- |\n| Universal | $APK_SHA256 |\n" >> commit_log.txt
           fi
-
-      # ✅ FIX: Tag management BEFORE release
       - name: Check if Tag Exists
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
         id: check-tag
@@ -158,7 +145,6 @@ jobs:
           fi
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
-
       - name: Delete Existing Tag
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' && steps.check-tag.outputs.TAG_EXISTS == 'true' }}
         run: |
@@ -167,7 +153,6 @@ jobs:
                https://api.github.com/repos/itsmechinmoy/echo-nightly/git/refs/tags/${{ env.RELEASE_TAG }}
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
-
       - name: Create Tag in itsmechinmoy/echo-nightly
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
         run: |
@@ -175,8 +160,6 @@ jobs:
           git push origin ${{ env.RELEASE_TAG }} --force
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
-
-      # ✅ Release AFTER tag is created
       - name: Create or Update GitHub Release
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
         uses: ncipollo/release-action@v1
@@ -186,7 +169,8 @@ jobs:
           tag: ${{ env.RELEASE_TAG }}
           name: New Echo Nightly Released
           bodyFile: commit_log.txt
-          artifacts: app-release.apk
+          # FIX: Use the renamed file from env
+          artifacts: ${{ env.APK_FILE }}
           draft: false
           prerelease: false
           token: ${{ secrets.PAT_TOKEN }}
@@ -198,7 +182,6 @@ jobs:
           allowUpdates: true
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
-
       - name: Set up SSH for Codeberg and GitLab
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
         run: |
@@ -207,26 +190,28 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -t rsa codeberg.org >> ~/.ssh/known_hosts
           ssh-keyscan -t rsa gitlab.com >> ~/.ssh/known_hosts
-
       - name: Prepare and push to Codeberg
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
         run: |
           git remote add codeberg git@codeberg.org:itsmechinmoy/echo.git
           git fetch --unshallow origin || true
           git fetch codeberg --no-tags
+          # FIX: Remove specific files before clean to preserve last-sha
+          rm -f "${{ env.APK_FILE }}" artifact.zip artifact_contents/ artifact_url.txt commit_log.txt
           git clean -fdx
           git rm -f .github/workflows/echo.yml || echo "Workflow file not found, skipping"
           git commit -m "Remove workflow file for Codeberg sync" || echo "No changes to commit"
           git push codeberg main --force
         env:
           GIT_SSH_COMMAND: ssh -i ~/.ssh/id_ed25519
-
       - name: Prepare and push to GitLab
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
         run: |
           git remote add gitlab git@gitlab.com:itsmechinmoy/echo.git
           git fetch --unshallow origin || true
           git fetch gitlab --no-tags
+          # FIX: Remove specific files before clean to preserve last-sha
+          rm -f "${{ env.APK_FILE }}" artifact.zip artifact_contents/ artifact_url.txt commit_log.txt
           git clean -fdx
           git rm -f .github/workflows/echo.yml || echo "Workflow file not found, skipping"
           git commit -m "Remove workflow file for GitLab sync" || echo "No changes to commit"
@@ -238,7 +223,6 @@ jobs:
           git push gitlab main
         env:
           GIT_SSH_COMMAND: ssh -i ~/.ssh/id_ed25519
-
       - name: Save and Upload last-sha for future runs
         if: always()
         run: |
@@ -249,7 +233,6 @@ jobs:
             echo "No latest SHA files found, skipping."
             exit 0
           fi
-
       - name: Upload last-sha Artifact
         if: always()
         uses: actions/upload-artifact@v4
