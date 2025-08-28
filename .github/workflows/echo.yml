@@ -107,7 +107,6 @@ jobs:
           unzip artifact.zip -d artifact_contents
           APK_FILE=$(find artifact_contents -name "*.apk" | head -1)
           if [ -z "$APK_FILE" ]; then echo "No APK found"; exit 1; fi
-          # FIX: Rename to unique name to avoid "already_exists" on updates
           COMMIT_SHA=$(cat latest_commit_sha.txt)
           SHORT_SHA=${COMMIT_SHA:0:8}
           mv "$APK_FILE" "Echo-Nightly-${SHORT_SHA}.apk"
@@ -127,7 +126,6 @@ jobs:
       - name: Ensure commit_log.txt exists
         run: |
           if [ ! -f commit_log.txt ]; then
-            # FIX: Use env var for renamed file in fallback
             echo "● No commit logs available" > commit_log.txt
             echo -e "\n---\n### Checksums\n| Variant | SHA-256 |\n| ------- | ------- |\n| Universal | $APK_SHA256 |\n" >> commit_log.txt
           fi
@@ -169,7 +167,6 @@ jobs:
           tag: ${{ env.RELEASE_TAG }}
           name: New Echo Nightly Released
           bodyFile: commit_log.txt
-          # FIX: Use the renamed file from env
           artifacts: ${{ env.APK_FILE }}
           draft: false
           prerelease: false
@@ -196,8 +193,8 @@ jobs:
           git remote add codeberg git@codeberg.org:itsmechinmoy/echo.git
           git fetch --unshallow origin || true
           git fetch codeberg --no-tags
-          # FIX: Remove specific files before clean to preserve last-sha
-          rm -f "${{ env.APK_FILE }}" artifact.zip artifact_contents/ artifact_url.txt commit_log.txt
+          # FIX: Add -r to rm to handle artifact_contents/ directory
+          rm -rf "${{ env.APK_FILE }}" artifact.zip artifact_contents/ artifact_url.txt commit_log.txt
           git clean -fdx
           git rm -f .github/workflows/echo.yml || echo "Workflow file not found, skipping"
           git commit -m "Remove workflow file for Codeberg sync" || echo "No changes to commit"
@@ -210,8 +207,8 @@ jobs:
           git remote add gitlab git@gitlab.com:itsmechinmoy/echo.git
           git fetch --unshallow origin || true
           git fetch gitlab --no-tags
-          # FIX: Remove specific files before clean to preserve last-sha
-          rm -f "${{ env.APK_FILE }}" artifact.zip artifact_contents/ artifact_url.txt commit_log.txt
+          # FIX: Add -r to rm to handle artifact_contents/ directory
+          rm -rf "${{ env.APK_FILE }}" artifact.zip artifact_contents/ artifact_url.txt commit_log.txt
           git clean -fdx
           git rm -f .github/workflows/echo.yml || echo "Workflow file not found, skipping"
           git commit -m "Remove workflow file for GitLab sync" || echo "No changes to commit"
