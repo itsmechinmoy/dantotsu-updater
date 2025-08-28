@@ -109,7 +109,6 @@ jobs:
           if [ -z "$APK_FILE" ]; then echo "No APK found"; exit 1; fi
           COMMIT_SHA=$(cat latest_commit_sha.txt)
           SHORT_SHA=${COMMIT_SHA:0:7}
-          # Create tag name based on timestamp and short SHA
           TAG_NAME="nightly-$(date +%Y%m%d-%H%M%S)-${SHORT_SHA}"
           mv "$APK_FILE" "Echo-Nightly-${SHORT_SHA}-${{ github.run_id }}.apk"
           SHA256=$(sha256sum "Echo-Nightly-${SHORT_SHA}-${{ github.run_id }}.apk" | awk '{print $1}')
@@ -132,36 +131,16 @@ jobs:
             echo "● No commit logs available" > commit_log.txt
             echo -e "\n---\n### Checksums\n| Variant | SHA-256 |\n| ------- | ------- |\n| Universal | $APK_SHA256 |\n" >> commit_log.txt
           fi
-      - name: Debug Release Creation
-        if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
-        run: |
-          echo "Checking PAT_TOKEN permissions"
-          curl -s -H "Authorization: Bearer ${{ secrets.PAT_TOKEN }}" \
-               -H "Accept: application/vnd.github+json" \
-               https://api.github.com/user | jq .
-          echo "Checking repository releases endpoint"
-          RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.PAT_TOKEN }}" \
-                         -H "Accept: application/vnd.github+json" \
-                         https://api.github.com/repos/itsmechinmoy/echo-nightly/releases)
-          if [[ $(echo "$RESPONSE" | jq -r '.message // "success"') != "success" ]]; then
-            echo "Releases API response: $RESPONSE"
-          else
-            echo "Releases API working correctly"
-          fi
       - name: Create or Update GitHub Release
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
         run: |
           RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.PAT_TOKEN }}" \
                          -H "Accept: application/vnd.github+json" \
                          https://api.github.com/repos/itsmechinmoy/echo-nightly/releases)
-          if [[ $(echo "$RESPONSE" | jq -r '.message // empty') == "Not Found" ]]; then
-            echo "No releases found, proceeding to create a new one"
-            RESPONSE="[]"
-          elif [[ -z "$RESPONSE" || "$RESPONSE" == "null" ]]; then
+          if [[ $(echo "$RESPONSE" | jq -r 'type') != "array" ]]; then
             echo "Invalid releases API response, exiting"
             exit 1
           fi
-          # Check if release with this tag already exists
           RELEASE_ID=$(echo "$RESPONSE" | jq -r --arg tag "${{ env.TAG_NAME }}" '.[] | select(.tag_name == $tag) | .id')
           BODY=$(cat commit_log.txt | jq -sR .)
           if [ -n "$RELEASE_ID" ] && [ "$RELEASE_ID" != "null" ]; then
@@ -171,8 +150,7 @@ jobs:
                                    -H "Accept: application/vnd.github+json" \
                                    https://api.github.com/repos/itsmechinmoy/echo-nightly/releases/$RELEASE_ID \
                                    -d "{\"tag_name\":\"${{ env.TAG_NAME }}\",\"target_commitish\":\"${{ env.COMMIT_SHA }}\",\"name\":\"Echo Nightly ${{ env.TAG_NAME }}\",\"body\":$BODY,\"draft\":false,\"prerelease\":true}")
-            echo "Update release response: $UPDATE_RESPONSE"
-            if [[ $(echo "$UPDATE_RESPONSE" | jq -r '.message // empty') != "empty" ]] && [[ $(echo "$UPDATE_RESPONSE" | jq -r '.id // empty') == "empty" ]]; then
+            if [[ $(echo "$UPDATE_RESPONSE" | jq -r '.id // empty') == "empty" ]]; then
               echo "Failed to update release: $UPDATE_RESPONSE"
               exit 1
             fi
@@ -184,7 +162,6 @@ jobs:
                                    -H "Accept: application/vnd.github+json" \
                                    https://api.github.com/repos/itsmechinmoy/echo-nightly/releases \
                                    -d "{\"tag_name\":\"${{ env.TAG_NAME }}\",\"target_commitish\":\"${{ env.COMMIT_SHA }}\",\"name\":\"Echo Nightly ${{ env.TAG_NAME }}\",\"body\":$BODY,\"draft\":false,\"prerelease\":true}")
-            echo "Create release response: $RELEASE_RESPONSE"
             FINAL_RELEASE_ID=$(echo "$RELEASE_RESPONSE" | jq -r '.id')
             if [[ -z "$FINAL_RELEASE_ID" || "$FINAL_RELEASE_ID" == "null" ]]; then
               echo "Failed to create release: $RELEASE_RESPONSE"
@@ -198,8 +175,7 @@ jobs:
                                 -H "Content-Type: application/vnd.android.package-archive" \
                                 --data-binary "@${{ env.APK_FILE }}" \
                                 https://uploads.github.com/repos/itsmechinmoy/echo-nightly/releases/$FINAL_RELEASE_ID/assets?name=${{ env.APK_FILE }})
-          echo "Upload APK response: $UPLOAD_RESPONSE"
-          if [[ $(echo "$UPLOAD_RESPONSE" | jq -r '.message // empty') != "empty" ]] && [[ $(echo "$UPLOAD_RESPONSE" | jq -r '.id // empty') == "empty" ]]; then
+          if [[ $(echo "$UPLOAD_RESPONSE" | jq -r '.id // empty') == "empty" ]]; then
             echo "Failed to upload APK: $UPLOAD_RESPONSE"
             exit 1
           fi
@@ -208,13 +184,9 @@ jobs:
       - name: Save and Upload last-sha for future runs
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
         run: |
-          echo "Saving last-sha files:"
-          ls -la
           if [[ -f latest_run_id.txt && -f latest_commit_sha.txt ]]; then
             cp latest_run_id.txt last_run_id.txt
             cp latest_commit_sha.txt last_commit_sha.txt
-            echo "Copied last-sha files:"
-            ls -la last_run_id.txt last_commit_sha.txt
           else
             echo "No latest SHA files found, skipping."
             exit 0
@@ -236,65 +208,57 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -t rsa codeberg.org >> ~/.ssh/known_hosts
           ssh-keyscan -t rsa gitlab.com >> ~/.ssh/known_hosts
-      - name: Debug File Presence Before Codeberg
-        if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
-        run: |
-          echo "Files before Codeberg step:"
-          ls -la
       - name: Prepare and push to Codeberg
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
         run: |
-          TEMP_DIR="temp-$GITHUB_RUN_ID"
+          # Store files we need to preserve
+          TEMP_DIR="temp-codeberg-$GITHUB_RUN_ID"
           mkdir -p "$TEMP_DIR"
-          mv last_run_id.txt last_commit_sha.txt "$TEMP_DIR/" || echo "No last-sha files to move"
-          echo "Files in $TEMP_DIR after move:"
-          ls -la "$TEMP_DIR"
-          git remote add codeberg git@codeberg.org:itsmechinmoy/echo.git
+          cp last_run_id.txt last_commit_sha.txt "$TEMP_DIR/"
+          
+          git remote add codeberg git@codeberg.org:itsmechinmoy/echo.git || true
           git fetch --unshallow origin || true
-          git fetch codeberg --no-tags
-          git rm -f .github/workflows/echo.yml || echo "Workflow file not found, skipping"
-          git commit -m "Remove workflow file for Codeberg sync" || echo "No changes to commit"
-          rm -rf "${{ env.APK_FILE }}" artifact.zip artifact_contents/ artifact_url.txt commit_log.txt last_run_id.txt last_commit_sha.txt
+          git fetch codeberg --no-tags || true
+          
+          # Clean workspace
           git clean -fdx
+          git reset --hard HEAD
+          
+          # Push to Codeberg
           git push codeberg main --force
-          mv "$TEMP_DIR/last_run_id.txt" "$TEMP_DIR/last_commit_sha.txt" . || echo "No last-sha files to restore"
-          echo "Files after restore:"
-          ls -la
+          
+          # Restore preserved files
+          cp "$TEMP_DIR/last_run_id.txt" "$TEMP_DIR/last_commit_sha.txt" .
+          rm -rf "$TEMP_DIR"
         env:
           GIT_SSH_COMMAND: ssh -i ~/.ssh/id_ed25519
-      - name: Debug File Presence Before GitLab
-        if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
-        run: |
-          echo "Files before GitLab step:"
-          ls -la
       - name: Prepare and push to GitLab
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
         run: |
-          TEMP_DIR="temp-$GITHUB_RUN_ID"
+          # Store files we need to preserve
+          TEMP_DIR="temp-gitlab-$GITHUB_RUN_ID"
           mkdir -p "$TEMP_DIR"
-          mv last_run_id.txt last_commit_sha.txt "$TEMP_DIR/" || echo "No last-sha files to move"
-          echo "Files in $TEMP_DIR after move:"
-          ls -la "$TEMP_DIR"
-          git remote add gitlab git@gitlab.com:itsmechinmoy/echo.git
+          cp last_run_id.txt last_commit_sha.txt "$TEMP_DIR/"
+          
+          git remote add gitlab git@gitlab.com:itsmechinmoy/echo.git || true
           git fetch --unshallow origin || true
-          git fetch gitlab --no-tags
-          git rm -f .github/workflows/echo.yml || echo "Workflow file not found, skipping"
-          git commit -m "Remove workflow file for GitLab sync" || echo "No changes to commit"
-          git merge gitlab/main --allow-unrelated-histories -m "Merge gitlab state" || {
-            git checkout origin/main -- .
-            git add .
-            git commit -m "Resolved GitLab merge conflict by keeping GitHub state"
-          }
-          rm -rf "${{ env.APK_FILE }}" artifact.zip artifact_contents/ artifact_url.txt commit_log.txt last_run_id.txt last_commit_sha.txt
+          git fetch gitlab --no-tags || true
+          
+          # Clean workspace
           git clean -fdx
+          git reset --hard HEAD
+          
+          # Merge with GitLab main if needed
+          git merge gitlab/main --allow-unrelated-histories -m "Merge gitlab state" || {
+            git reset --hard HEAD
+            echo "Merge failed, force pushing instead"
+          }
+          
+          # Push to GitLab
           git push gitlab main
-          mv "$TEMP_DIR/last_run_id.txt" "$TEMP_DIR/last_commit_sha.txt" . || echo "No last-sha files to restore"
-          echo "Files after restore:"
-          ls -la
+          
+          # Restore preserved files
+          cp "$TEMP_DIR/last_run_id.txt" "$TEMP_DIR/last_commit_sha.txt" .
+          rm -rf "$TEMP_DIR"
         env:
           GIT_SSH_COMMAND: ssh -i ~/.ssh/id_ed25519
-      - name: Debug File Presence After All Steps
-        if: always()
-        run: |
-          echo "Files after all steps:"
-          ls -la
