@@ -108,14 +108,14 @@ jobs:
           APK_FILE=$(find artifact_contents -name "*.apk" | head -1)
           if [ -z "$APK_FILE" ]; then echo "No APK found"; exit 1; fi
           COMMIT_SHA=$(cat latest_commit_sha.txt)
-          SHORT_SHA=${COMMIT_SHA:0:8}
+          SHORT_SHA=${COMMIT_SHA:0:7}
           mv "$APK_FILE" "Echo-Nightly-${SHORT_SHA}-${{ github.run_id }}.apk"
           SHA256=$(sha256sum "Echo-Nightly-${SHORT_SHA}-${{ github.run_id }}.apk" | awk '{print $1}')
           echo "APK_FILE=Echo-Nightly-${SHORT_SHA}-${{ github.run_id }}.apk" >> $GITHUB_ENV
           echo "APK_SHA256=$SHA256" >> $GITHUB_ENV
           echo "COMMIT_SHA=$COMMIT_SHA" >> $GITHUB_ENV
           echo "SHORT_SHA=$SHORT_SHA" >> $GITHUB_ENV
-          echo "RELEASE_TAG=${SHORT_SHA}-${{ github.run_id }}" >> $GITHUB_ENV
+          echo "RELEASE_TAG=$SHORT_SHA" >> $GITHUB_ENV
           REPO_URL="https://github.com/brahmkshatriya/echo"
           git fetch upstream --depth=50
           COMMIT_LOGS=$(git log -1 --pretty=format:"● %s ~%an [֍](${REPO_URL}/commit/%H)" $COMMIT_SHA || echo "")
@@ -123,13 +123,35 @@ jobs:
           echo -e "Commits:\n" > commit_log.txt
           echo "$COMMIT_LOGS" | sed 's/●/\n●/g' | sed '/^$/d' >> commit_log.txt
           echo -e "\n---\n### Checksums\n| Variant | SHA-256 |\n| ------- | ------- |\n| Universal | $SHA256 |\n\n" >> commit_log.txt
-          echo -e "<img src=\"https://img.shields.io/github/downloads/itsmechinmoy/echo-nightly/total?style=for-the-badge&label=TOTAL%20DOWNLOADS&labelColor=black&color=white\"/> <img src=\"https://img.shields.io/github/downloads/itsmechinmoy/echo-nightly/${SHORT_SHA}-${{ github.run_id }}/total?style=for-the-badge&label=CURRENT%20RELEASE&labelColor=black&color=white\"/>" >> commit_log.txt
+          echo -e "<img src=\"https://img.shields.io/github/downloads/itsmechinmoy/echo-nightly/total?style=for-the-badge&label=TOTAL%20DOWNLOADS&labelColor=black&color=white\"/> <img src=\"https://img.shields.io/github/downloads/itsmechinmoy/echo-nightly/${SHORT_SHA}/total?style=for-the-badge&label=CURRENT%20RELEASE&labelColor=black&color=white\"/>" >> commit_log.txt
       - name: Ensure commit_log.txt exists
         run: |
           if [ ! -f commit_log.txt ]; then
             echo "● No commit logs available" > commit_log.txt
             echo -e "\n---\n### Checksums\n| Variant | SHA-256 |\n| ------- | ------- |\n| Universal | $APK_SHA256 |\n" >> commit_log.txt
           fi
+      - name: Check if Tag Exists
+        if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
+        id: check-tag
+        run: |
+          RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.PAT_TOKEN }}" \
+                         -H "Accept: application/vnd.github+json" \
+                         https://api.github.com/repos/itsmechinmoy/echo-nightly/git/refs/tags/${{ env.RELEASE_TAG }})
+          if echo "$RESPONSE" | jq -e .ref > /dev/null; then
+            echo "TAG_EXISTS=true" >> $GITHUB_OUTPUT
+          else
+            echo "TAG_EXISTS=false" >> $GITHUB_OUTPUT
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
+      - name: Delete Existing Tag
+        if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' && steps.check-tag.outputs.TAG_EXISTS == 'true' }}
+        run: |
+          curl -s -X DELETE \
+               -H "Authorization: Bearer ${{ secrets.PAT_TOKEN }}" \
+               https://api.github.com/repos/itsmechinmoy/echo-nightly/git/refs/tags/${{ env.RELEASE_TAG }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
       - name: Create Tag in itsmechinmoy/echo-nightly
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
         run: |
