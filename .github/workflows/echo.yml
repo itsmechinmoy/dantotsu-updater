@@ -109,12 +109,13 @@ jobs:
           if [ -z "$APK_FILE" ]; then echo "No APK found"; exit 1; fi
           COMMIT_SHA=$(cat latest_commit_sha.txt)
           SHORT_SHA=${COMMIT_SHA:0:8}
-          # Use run_id for unique APK name
           mv "$APK_FILE" "Echo-Nightly-${SHORT_SHA}-${{ github.run_id }}.apk"
           SHA256=$(sha256sum "Echo-Nightly-${SHORT_SHA}-${{ github.run_id }}.apk" | awk '{print $1}')
           echo "APK_FILE=Echo-Nightly-${SHORT_SHA}-${{ github.run_id }}.apk" >> $GITHUB_ENV
           echo "APK_SHA256=$SHA256" >> $GITHUB_ENV
           echo "COMMIT_SHA=$COMMIT_SHA" >> $GITHUB_ENV
+          # FIX: Set SHORT_SHA as env var for release name
+          echo "SHORT_SHA=$SHORT_SHA" >> $GITHUB_ENV
           REPO_URL="https://github.com/brahmkshatriya/echo"
           git fetch upstream --depth=50
           COMMIT_LOGS=$(git log -1 --pretty=format:"● %s ~%an [֍](${REPO_URL}/commit/%H)" $COMMIT_SHA || echo "")
@@ -122,7 +123,6 @@ jobs:
           echo -e "Commits:\n" > commit_log.txt
           echo "$COMMIT_LOGS" | sed 's/●/\n●/g' | sed '/^$/d' >> commit_log.txt
           echo -e "\n---\n### Checksums\n| Variant | SHA-256 |\n| ------- | ------- |\n| Universal | $SHA256 |\n\n" >> commit_log.txt
-          # Use commit SHA for badge since no tag
           echo -e "<img src=\"https://img.shields.io/github/downloads/itsmechinmoy/echo-nightly/total?style=for-the-badge&label=TOTAL%20DOWNLOADS&labelColor=black&color=white\"/>" >> commit_log.txt
       - name: Ensure commit_log.txt exists
         run: |
@@ -136,9 +136,9 @@ jobs:
         with:
           owner: itsmechinmoy
           repo: echo-nightly
-          # Use commit SHA instead of tag to preserve GPG signature
           commit: ${{ env.COMMIT_SHA }}
-          name: New Echo Nightly Released (${{ env.COMMIT_SHA:0:8 }})
+          # FIX: Use SHORT_SHA env var instead of invalid syntax
+          name: New Echo Nightly Released (${{ env.SHORT_SHA }})
           bodyFile: commit_log.txt
           artifacts: ${{ env.APK_FILE }}
           draft: false
@@ -163,7 +163,6 @@ jobs:
       - name: Prepare and push to Codeberg
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
         run: |
-          # Preserve last-sha files
           mkdir -p temp
           mv latest_run_id.txt latest_commit_sha.txt temp/ || true
           git remote add codeberg git@codeberg.org:itsmechinmoy/echo.git
@@ -174,14 +173,12 @@ jobs:
           rm -rf "${{ env.APK_FILE }}" artifact.zip artifact_contents/ artifact_url.txt commit_log.txt
           git clean -fdx
           git push codeberg main --force
-          # Restore last-sha files
           mv temp/latest_run_id.txt temp/latest_commit_sha.txt . || true
         env:
           GIT_SSH_COMMAND: ssh -i ~/.ssh/id_ed25519
       - name: Prepare and push to GitLab
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
         run: |
-          # Preserve last-sha files
           mkdir -p temp
           mv latest_run_id.txt latest_commit_sha.txt temp/ || true
           git remote add gitlab git@gitlab.com:itsmechinmoy/echo.git
@@ -197,10 +194,12 @@ jobs:
           rm -rf "${{ env.APK_FILE }}" artifact.zip artifact_contents/ artifact_url.txt commit_log.txt
           git clean -fdx
           git push gitlab main
-          # Restore last-sha files
           mv temp/latest_run_id.txt temp/latest_commit_sha.txt . || true
         env:
           GIT_SSH_COMMAND: ssh -i ~/.ssh/id_ed25519
+      - name: Debug file presence
+        if: always()
+        run: ls -la
       - name: Save and Upload last-sha for future runs
         if: always()
         run: |
