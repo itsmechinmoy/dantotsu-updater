@@ -115,7 +115,6 @@ jobs:
           echo "APK_SHA256=$SHA256" >> $GITHUB_ENV
           echo "COMMIT_SHA=$COMMIT_SHA" >> $GITHUB_ENV
           echo "SHORT_SHA=$SHORT_SHA" >> $GITHUB_ENV
-          echo "RELEASE_TAG=$SHORT_SHA" >> $GITHUB_ENV
           REPO_URL="https://github.com/brahmkshatriya/echo"
           git fetch upstream --depth=50
           COMMIT_LOGS=$(git log -1 --pretty=format:"● %s ~%an [֍](${REPO_URL}/commit/%H)" $COMMIT_SHA || echo "")
@@ -130,43 +129,6 @@ jobs:
             echo "● No commit logs available" > commit_log.txt
             echo -e "\n---\n### Checksums\n| Variant | SHA-256 |\n| ------- | ------- |\n| Universal | $APK_SHA256 |\n" >> commit_log.txt
           fi
-      - name: Set up SSH for Codeberg and GitLab
-        if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -t rsa codeberg.org >> ~/.ssh/known_hosts
-          ssh-keyscan -t rsa gitlab.com >> ~/.ssh/known_hosts
-      - name: Check if Tag Exists
-        if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
-        id: check-tag
-        run: |
-          RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.PAT_TOKEN }}" \
-                         -H "Accept: application/vnd.github+json" \
-                         https://api.github.com/repos/itsmechinmoy/echo-nightly/git/refs/tags/${{ env.RELEASE_TAG }})
-          if echo "$RESPONSE" | jq -e '.ref // empty' > /dev/null; then
-            echo "TAG_EXISTS=true" >> $GITHUB_OUTPUT
-          else
-            echo "TAG_EXISTS=false" >> $GITHUB_OUTPUT
-          fi
-        env:
-          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
-      - name: Delete Existing Tag
-        if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' && steps.check-tag.outputs.TAG_EXISTS == 'true' }}
-        run: |
-          curl -s -X DELETE \
-               -H "Authorization: Bearer ${{ secrets.PAT_TOKEN }}" \
-               https://api.github.com/repos/itsmechinmoy/echo-nightly/git/refs/tags/${{ env.RELEASE_TAG }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
-      - name: Create Tag in itsmechinmoy/echo-nightly
-        if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
-        run: |
-          git tag -f ${{ env.RELEASE_TAG }} ${{ env.COMMIT_SHA }}
-          git push origin ${{ env.RELEASE_TAG }} --force
-        env:
-          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
       - name: Create or Update GitHub Release
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
         run: |
@@ -180,13 +142,13 @@ jobs:
                  -H "Authorization: Bearer ${{ secrets.PAT_TOKEN }}" \
                  -H "Accept: application/vnd.github+json" \
                  https://api.github.com/repos/itsmechinmoy/echo-nightly/releases/$RELEASE_ID \
-                 -d "{\"tag_name\":\"${{ env.RELEASE_TAG }}\",\"target_commitish\":\"${{ env.COMMIT_SHA }}\",\"name\":\"New Echo Nightly Released (${{ env.SHORT_SHA }})\",\"body\":$BODY,\"draft\":false,\"prerelease\":false}"
+                 -d "{\"target_commitish\":\"${{ env.COMMIT_SHA }}\",\"name\":\"New Echo Nightly Released\",\"body\":$BODY,\"draft\":false,\"prerelease\":false}"
           else
             RELEASE_RESPONSE=$(curl -s -X POST \
                                    -H "Authorization: Bearer ${{ secrets.PAT_TOKEN }}" \
                                    -H "Accept: application/vnd.github+json" \
                                    https://api.github.com/repos/itsmechinmoy/echo-nightly/releases \
-                                   -d "{\"tag_name\":\"${{ env.RELEASE_TAG }}\",\"target_commitish\":\"${{ env.COMMIT_SHA }}\",\"name\":\"New Echo Nightly Released (${{ env.SHORT_SHA }})\",\"body\":$BODY,\"draft\":false,\"prerelease\":false}")
+                                   -d "{\"target_commitish\":\"${{ env.COMMIT_SHA }}\",\"name\":\"New Echo Nightly Released\",\"body\":$BODY,\"draft\":false,\"prerelease\":false}")
             RELEASE_ID=$(echo "$RELEASE_RESPONSE" | jq -r .id)
           fi
           curl -s -X POST \
@@ -197,6 +159,37 @@ jobs:
                https://uploads.github.com/repos/itsmechinmoy/echo-nightly/releases/$RELEASE_ID/assets?name=${{ env.APK_FILE }}
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
+      - name: Save and Upload last-sha for future runs
+        if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
+        run: |
+          echo "Saving last-sha files:"
+          ls -la
+          if [[ -f latest_run_id.txt && -f latest_commit_sha.txt ]]; then
+            cp latest_run_id.txt last_run_id.txt
+            cp latest_commit_sha.txt last_commit_sha.txt
+            echo "Copied last-sha files:"
+            ls -la last_run_id.txt last_commit_sha.txt
+          else
+            echo "No latest SHA files found, skipping."
+            exit 0
+          fi
+      - name: Upload last-sha Artifact
+        if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: last-sha
+          path: |
+            last_run_id.txt
+            last_commit_sha.txt
+          retention-days: 90
+      - name: Set up SSH for Codeberg and GitLab
+        if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -t rsa codeberg.org >> ~/.ssh/known_hosts
+          ssh-keyscan -t rsa gitlab.com >> ~/.ssh/known_hosts
       - name: Debug File Presence Before Codeberg
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
         run: |
@@ -205,19 +198,20 @@ jobs:
       - name: Prepare and push to Codeberg
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
         run: |
-          mkdir -p temp
-          mv latest_run_id.txt latest_commit_sha.txt temp/ || echo "No last-sha files to move"
-          echo "Files in temp after move:"
-          ls -la temp
+          TEMP_DIR="temp-$GITHUB_RUN_ID"
+          mkdir -p "$TEMP_DIR"
+          mv last_run_id.txt last_commit_sha.txt "$TEMP_DIR/" || echo "No last-sha files to move"
+          echo "Files in $TEMP_DIR after move:"
+          ls -la "$TEMP_DIR"
           git remote add codeberg git@codeberg.org:itsmechinmoy/echo.git
           git fetch --unshallow origin || true
           git fetch codeberg --no-tags
           git rm -f .github/workflows/echo.yml || echo "Workflow file not found, skipping"
           git commit -m "Remove workflow file for Codeberg sync" || echo "No changes to commit"
-          rm -rf "${{ env.APK_FILE }}" artifact.zip artifact_contents/ artifact_url.txt commit_log.txt
+          rm -rf "${{ env.APK_FILE }}" artifact.zip artifact_contents/ artifact_url.txt commit_log.txt last_run_id.txt last_commit_sha.txt
           git clean -fdx
           git push codeberg main --force
-          mv temp/latest_run_id.txt temp/latest_commit_sha.txt . || echo "No last-sha files to restore"
+          mv "$TEMP_DIR/last_run_id.txt" "$TEMP_DIR/last_commit_sha.txt" . || echo "No last-sha files to restore"
           echo "Files after restore:"
           ls -la
         env:
@@ -230,10 +224,11 @@ jobs:
       - name: Prepare and push to GitLab
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
         run: |
-          mkdir -p temp
-          mv latest_run_id.txt latest_commit_sha.txt temp/ || echo "No last-sha files to move"
-          echo "Files in temp after move:"
-          ls -la temp
+          TEMP_DIR="temp-$GITHUB_RUN_ID"
+          mkdir -p "$TEMP_DIR"
+          mv last_run_id.txt last_commit_sha.txt "$TEMP_DIR/" || echo "No last-sha files to move"
+          echo "Files in $TEMP_DIR after move:"
+          ls -la "$TEMP_DIR"
           git remote add gitlab git@gitlab.com:itsmechinmoy/echo.git
           git fetch --unshallow origin || true
           git fetch gitlab --no-tags
@@ -244,35 +239,16 @@ jobs:
             git add .
             git commit -m "Resolved GitLab merge conflict by keeping GitHub state"
           }
-          rm -rf "${{ env.APK_FILE }}" artifact.zip artifact_contents/ artifact_url.txt commit_log.txt
+          rm -rf "${{ env.APK_FILE }}" artifact.zip artifact_contents/ artifact_url.txt commit_log.txt last_run_id.txt last_commit_sha.txt
           git clean -fdx
           git push gitlab main
-          mv temp/latest_run_id.txt temp/latest_commit_sha.txt . || echo "No last-sha files to restore"
+          mv "$TEMP_DIR/last_run_id.txt" "$TEMP_DIR/last_commit_sha.txt" . || echo "No last-sha files to restore"
           echo "Files after restore:"
           ls -la
         env:
           GIT_SSH_COMMAND: ssh -i ~/.ssh/id_ed25519
-      - name: Debug File Presence Before Upload
+      - name: Debug File Presence After All Steps
         if: always()
         run: |
-          echo "Files before last-sha upload:"
+          echo "Files after all steps:"
           ls -la
-      - name: Save and Upload last-sha for future runs
-        if: always()
-        run: |
-          if [[ -f latest_run_id.txt && -f latest_commit_sha.txt ]]; then
-            cp latest_run_id.txt last_run_id.txt
-            cp latest_commit_sha.txt last_commit_sha.txt
-          else
-            echo "No latest SHA files found, skipping."
-            exit 0
-          fi
-      - name: Upload last-sha Artifact
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: last-sha
-          path: |
-            last_run_id.txt
-            last_commit_sha.txt
-          retention-days: 90
