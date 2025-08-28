@@ -216,7 +216,7 @@ jobs:
           cp last_run_id.txt last_commit_sha.txt /tmp/preserve-$GITHUB_RUN_ID/
           
           git remote add codeberg git@codeberg.org:itsmechinmoy/echo.git || true
-          git fetch --unshallow origin || true
+          git fetch origin || true
           git fetch codeberg --no-tags || true
           
           # Clean workspace
@@ -234,13 +234,13 @@ jobs:
       - name: Prepare and push to GitLab
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
         run: |
-          # Store files we need to preserve
-          TEMP_DIR="temp-gitlab-$GITHUB_RUN_ID"
+          # Store files we need to preserve outside git directory
+          TEMP_DIR="/tmp/temp-gitlab-$GITHUB_RUN_ID"
           mkdir -p "$TEMP_DIR"
           cp last_run_id.txt last_commit_sha.txt "$TEMP_DIR/"
           
           git remote add gitlab git@gitlab.com:itsmechinmoy/echo.git || true
-          git fetch --unshallow origin || true
+          git fetch origin || true
           git fetch gitlab --no-tags || true
           
           # Clean workspace
