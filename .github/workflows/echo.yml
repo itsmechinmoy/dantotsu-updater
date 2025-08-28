@@ -180,7 +180,9 @@ jobs:
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
         run: |
           git remote add codeberg git@codeberg.org:itsmechinmoy/echo.git
+          git fetch --unshallow origin || true
           git fetch codeberg --no-tags
+          git clean -fdx
           git rm -f .github/workflows/echo.yml || echo "Workflow file not found, skipping"
           git commit -m "Remove workflow file for Codeberg sync" || echo "No changes to commit"
           git push codeberg main --force
