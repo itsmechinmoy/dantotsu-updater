@@ -1,46 +1,262 @@
-name: Generate Release
+name: Sync Echo and Create Releases
+
+permissions:
+  contents: write
 
 on:
-  push:
-    branches:
-      - main
+  schedule:
+    - cron: '*/30 * * * *'  # Runs every 30 minutes
+  workflow_dispatch:
 
 jobs:
-  build:
+  sync-and-release:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      - name: Setup Java
-        uses: actions/setup-java@v3
+      - name: Checkout itsmechinmoy/echo-nightly
+        uses: actions/checkout@v4
         with:
-          distribution: temurin
-          java-version: 17
+          repository: itsmechinmoy/echo-nightly
+          token: ${{ secrets.PAT_TOKEN }}
+          fetch-depth: 0
 
-      - name: Setup Gradle
-        uses: gradle/gradle-build-action@v2
-
-      - name: Build APK
-        run: ./gradlew assembleRelease
-
-      - name: Generate commit log
+      - name: Configure Git identity
         run: |
-          echo "### Commit Log" > commit_log.txt
-          git log -1 --pretty=format:"%h - %s (%an)" >> commit_log.txt
-          cat commit_log.txt
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
 
-      - name: Release
+      - name: Fetch latest commit from brahmkshatriya/echo
+        run: |
+          git remote add upstream https://github.com/brahmkshatriya/echo.git
+          git fetch upstream --no-tags
+          UPSTREAM_COMMIT_SHA=$(git rev-parse upstream/main)
+          echo "UPSTREAM_COMMIT_SHA=$UPSTREAM_COMMIT_SHA" >> $GITHUB_OUTPUT
+        id: fetch-upstream
+
+      - name: Check for new commits
+        id: check-commits
+        run: |
+          CURRENT_COMMIT_SHA=$(git rev-parse origin/main)
+          if [ "$CURRENT_COMMIT_SHA" != "${{ steps.fetch-upstream.outputs.UPSTREAM_COMMIT_SHA }}" ]; then
+            echo "SHOULD_SYNC=true" >> $GITHUB_OUTPUT
+          else
+            echo "SHOULD_SYNC=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Sync commits from brahmkshatriya/echo
+        if: ${{ steps.check-commits.outputs.SHOULD_SYNC == 'true' }}
+        run: |
+          git checkout main
+          git merge upstream/main --allow-unrelated-histories -m "Sync with brahmkshatriya/echo main"
+          git push origin main
+
+      - name: Check for new nightly build
+        id: check-build
+        run: |
+          echo "Checking for new nightly build from brahmkshatriya/echo"
+          RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.PAT_TOKEN }}" \
+                         -H "Accept: application/vnd.github+json" \
+                         https://api.github.com/repos/brahmkshatriya/echo/actions/workflows/nightly.yml/runs?status=success)
+          LATEST_RUN_ID=$(echo "$RESPONSE" | jq -r '.workflow_runs[0].id')
+          if [ -z "$LATEST_RUN_ID" ]; then
+            echo "No successful nightly runs found!"
+            echo "SHOULD_RELEASE=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          LATEST_COMMIT_SHA=$(echo "$RESPONSE" | jq -r '.workflow_runs[0].head_sha')
+          echo "LATEST_RUN_ID=$LATEST_RUN_ID" >> $GITHUB_OUTPUT
+          echo "LATEST_COMMIT_SHA=$LATEST_COMMIT_SHA" >> $GITHUB_OUTPUT
+          echo "$LATEST_RUN_ID" > latest_run_id.txt
+          echo "$LATEST_COMMIT_SHA" > latest_commit_sha.txt
+          echo "SHOULD_RELEASE=true" >> $GITHUB_OUTPUT
+
+      - name: Download last run ID and commit SHA artifact
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          workflow: echo.yml
+          name: last-sha
+          path: .
+          repo: itsmechinmoy/dantotsu-updater
+          if_no_artifact_found: warn
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
+
+      - name: Check if new nightly build exists
+        id: compare
+        if: ${{ steps.check-build.outputs.SHOULD_RELEASE == 'true' }}
+        run: |
+          LATEST_RUN_ID=$(cat latest_run_id.txt)
+          LATEST_COMMIT_SHA=$(cat latest_commit_sha.txt)
+          if [ -f last_run_id.txt ] && [ -f last_commit_sha.txt ]; then
+            LAST_RUN_ID=$(cat last_run_id.txt)
+            LAST_COMMIT_SHA=$(cat last_commit_sha.txt)
+            echo "LAST_RUN_ID=${LAST_RUN_ID}" >> $GITHUB_OUTPUT
+            echo "LAST_COMMIT_SHA=${LAST_COMMIT_SHA}" >> $GITHUB_OUTPUT
+          else
+            LAST_RUN_ID=""
+            LAST_COMMIT_SHA=""
+            echo "LAST_RUN_ID=${LAST_RUN_ID}" >> $GITHUB_OUTPUT
+            echo "LAST_COMMIT_SHA=${LAST_COMMIT_SHA}" >> $GITHUB_OUTPUT
+          fi
+          if [ "$LATEST_COMMIT_SHA" == "$LAST_COMMIT_SHA" ]; then
+            echo "SHOULD_RELEASE=false" >> $GITHUB_OUTPUT
+          else
+            echo "SHOULD_RELEASE=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Download Nightly Artifact
+        if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
+        id: download-artifact
+        run: |
+          LATEST_RUN_ID=$(cat latest_run_id.txt)
+          curl -H "Authorization: Bearer ${{ secrets.PAT_TOKEN }}" \
+               -H "Accept: application/vnd.github+json" \
+               https://api.github.com/repos/brahmkshatriya/echo/actions/runs/$LATEST_RUN_ID/artifacts \
+               | jq -r '.artifacts[0].archive_download_url' > artifact_url.txt
+          ARTIFACT_URL=$(cat artifact_url.txt)
+          curl -L -H "Authorization: Bearer ${{ secrets.PAT_TOKEN }}" -o artifact.zip "$ARTIFACT_URL"
+          unzip artifact.zip -d artifact_contents
+          APK_FILE=$(find artifact_contents -name "*.apk" | head -1)
+          if [ -z "$APK_FILE" ]; then echo "No APK found"; exit 1; fi
+          mv "$APK_FILE" app-release.apk
+          SHA256=$(sha256sum app-release.apk | awk '{print $1}')
+          echo "APK_SHA256=$SHA256" >> $GITHUB_ENV
+          COMMIT_SHA=$(cat latest_commit_sha.txt)
+          echo "COMMIT_SHA=$COMMIT_SHA" >> $GITHUB_ENV
+          SHORT_SHA=${COMMIT_SHA:0:8}
+          echo "RELEASE_TAG=$SHORT_SHA" >> $GITHUB_ENV
+
+          # Fetch enough history to ensure commit exists
+          REPO_URL="https://github.com/brahmkshatriya/echo"
+          git fetch upstream --depth=50
+          COMMIT_LOGS=$(git log -1 --pretty=format:"● %s ~%an [֍](${REPO_URL}/commit/%H)" $COMMIT_SHA || echo "")
+          [ -z "$COMMIT_LOGS" ] && COMMIT_LOGS="● No new commits for this release"
+
+          # Write commit_log.txt safely
+          echo -e "Commits:\n" > commit_log.txt
+          echo "$COMMIT_LOGS" | sed 's/●/\n●/g' | sed '/^$/d' >> commit_log.txt
+          echo -e "\n---\n### Checksums\n| Variant | SHA-256 |\n| ------- | ------- |\n| Universal | $SHA256 |\n\n" >> commit_log.txt
+          echo -e "<img src=\"https://img.shields.io/github/downloads/itsmechinmoy/echo-nightly/total?style=for-the-badge&label=TOTAL%20DOWNLOADS&labelColor=black&color=white\"/> <img src=\"https://img.shields.io/github/downloads/itsmechinmoy/echo-nightly/$SHORT_SHA/total?style=for-the-badge&label=CURRENT%20RELEASE&labelColor=black&color=white\"/>" >> commit_log.txt
+
+      - name: Ensure commit_log.txt exists
+        run: |
+          if [ ! -f commit_log.txt ]; then
+            echo "● No commit logs available" > commit_log.txt
+            echo -e "\n---\n### Checksums\n| Variant | SHA-256 |\n| ------- | ------- |\n| Universal | $APK_SHA256 |\n" >> commit_log.txt
+          fi
+
+      # 🔥 Moved up here (before Codeberg/GitLab sync)
+      - name: Create or Update GitHub Release
+        if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
         uses: ncipollo/release-action@v1
         with:
           owner: itsmechinmoy
           repo: echo-nightly
-          tag: ${{ github.sha }}
+          tag: ${{ env.RELEASE_TAG }}
           name: New Echo Nightly Released
           bodyFile: commit_log.txt
-          artifacts: app/build/outputs/apk/release/app-release.apk
+          artifacts: app-release.apk
           draft: false
           prerelease: false
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.PAT_TOKEN }}
+          skipIfReleaseExists: false
+          omitBodyDuringUpdate: false
+          omitNameDuringUpdate: false
+          omitPrereleaseDuringUpdate: false
+          replacesArtifacts: false
           allowUpdates: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
+
+      - name: Check if Tag Exists
+        if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
+        id: check-tag
+        run: |
+          RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.PAT_TOKEN }}" \
+                         -H "Accept: application/vnd.github+json" \
+                         https://api.github.com/repos/itsmechinmoy/echo-nightly/git/refs/tags/${{ env.RELEASE_TAG }})
+          if echo "$RESPONSE" | jq -e .ref > /dev/null; then
+            echo "TAG_EXISTS=true" >> $GITHUB_OUTPUT
+          else
+            echo "TAG_EXISTS=false" >> $GITHUB_OUTPUT
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
+
+      - name: Delete Existing Tag
+        if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' && steps.check-tag.outputs.TAG_EXISTS == 'true' }}
+        run: |
+          curl -s -X DELETE \
+               -H "Authorization: Bearer ${{ secrets.PAT_TOKEN }}" \
+               https://api.github.com/repos/itsmechinmoy/echo-nightly/git/refs/tags/${{ env.RELEASE_TAG }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
+
+      - name: Create Tag in itsmechinmoy/echo-nightly
+        if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
+        run: |
+          git tag -f ${{ env.RELEASE_TAG }} ${{ env.COMMIT_SHA }}
+          git push origin ${{ env.RELEASE_TAG }} --force
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
+
+      - name: Set up SSH for Codeberg and GitLab
+        if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -t rsa codeberg.org >> ~/.ssh/known_hosts
+          ssh-keyscan -t rsa gitlab.com >> ~/.ssh/known_hosts
+
+      - name: Prepare and push to Codeberg
+        if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
+        run: |
+          git remote add codeberg git@codeberg.org:itsmechinmoy/echo.git
+          git fetch --unshallow origin || true
+          git fetch codeberg --no-tags
+          git clean -fdx
+          git rm -f .github/workflows/echo.yml || echo "Workflow file not found, skipping"
+          git commit -m "Remove workflow file for Codeberg sync" || echo "No changes to commit"
+          git push codeberg main --force
+        env:
+          GIT_SSH_COMMAND: ssh -i ~/.ssh/id_ed25519
+
+      - name: Prepare and push to GitLab
+        if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
+        run: |
+          git remote add gitlab git@gitlab.com:itsmechinmoy/echo.git
+          git fetch --unshallow origin || true
+          git fetch gitlab --no-tags
+          git clean -fdx
+          git rm -f .github/workflows/echo.yml || echo "Workflow file not found, skipping"
+          git commit -m "Remove workflow file for GitLab sync" || echo "No changes to commit"
+          git merge gitlab/main --allow-unrelated-histories -m "Merge gitlab state" || {
+            git checkout origin/main -- .
+            git add .
+            git commit -m "Resolved GitLab merge conflict by keeping GitHub state"
+          }
+          git push gitlab main
+        env:
+          GIT_SSH_COMMAND: ssh -i ~/.ssh/id_ed25519
+
+      - name: Save and Upload last-sha for future runs
+        if: always()
+        run: |
+          if [[ -f latest_run_id.txt && -f latest_commit_sha.txt ]]; then
+            cp latest_run_id.txt last_run_id.txt
+            cp latest_commit_sha.txt last_commit_sha.txt
+          else
+            echo "No latest SHA files found, skipping."
+            exit 0
+          fi
+
+      - name: Upload last-sha Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: last-sha
+          path: |
+            last_run_id.txt
+            last_commit_sha.txt
+          retention-days: 90
