@@ -130,6 +130,14 @@ jobs:
             echo "● No commit logs available" > commit_log.txt
             echo -e "\n---\n### Checksums\n| Variant | SHA-256 |\n| ------- | ------- |\n| Universal | $APK_SHA256 |\n" >> commit_log.txt
           fi
+      - name: Set up SSH for Codeberg and GitLab
+        if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -t rsa codeberg.org >> ~/.ssh/known_hosts
+          ssh-keyscan -t rsa gitlab.com >> ~/.ssh/known_hosts
       - name: Check if Tag Exists
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
         id: check-tag
@@ -161,19 +169,34 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
       - name: Create or Update GitHub Release
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
-        uses: softprops/action-gh-release@v2
-        with:
-          repository: itsmechinmoy/echo-nightly
-          tag_name: ${{ env.RELEASE_TAG }}
-          target_commitish: ${{ env.COMMIT_SHA }}
-          name: New Echo Nightly Released (${{ env.SHORT_SHA }})
-          body_path: commit_log.txt
-          files: ${{ env.APK_FILE }}
-          draft: false
-          prerelease: false
-          token: ${{ secrets.PAT_TOKEN }}
-          fail_on_unmatched_files: true
-          make_latest: true
+        run: |
+          RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.PAT_TOKEN }}" \
+                         -H "Accept: application/vnd.github+json" \
+                         https://api.github.com/repos/itsmechinmoy/echo-nightly/releases)
+          RELEASE_ID=$(echo "$RESPONSE" | jq -r --arg sha "${{ env.COMMIT_SHA }}" '.[] | select(.target_commitish == $sha) | .id')
+          BODY=$(cat commit_log.txt | jq -sR .)
+          if [ -n "$RELEASE_ID" ]; then
+            curl -s -X PATCH \
+                 -H "Authorization: Bearer ${{ secrets.PAT_TOKEN }}" \
+                 -H "Accept: application/vnd.github+json" \
+                 https://api.github.com/repos/itsmechinmoy/echo-nightly/releases/$RELEASE_ID \
+                 -d "{\"tag_name\":\"${{ env.RELEASE_TAG }}\",\"target_commitish\":\"${{ env.COMMIT_SHA }}\",\"name\":\"New Echo Nightly Released (${{ env.SHORT_SHA }})\",\"body\":$BODY,\"draft\":false,\"prerelease\":false}"
+          else
+            RELEASE_RESPONSE=$(curl -s -X POST \
+                                   -H "Authorization: Bearer ${{ secrets.PAT_TOKEN }}" \
+                                   -H "Accept: application/vnd.github+json" \
+                                   https://api.github.com/repos/itsmechinmoy/echo-nightly/releases \
+                                   -d "{\"tag_name\":\"${{ env.RELEASE_TAG }}\",\"target_commitish\":\"${{ env.COMMIT_SHA }}\",\"name\":\"New Echo Nightly Released (${{ env.SHORT_SHA }})\",\"body\":$BODY,\"draft\":false,\"prerelease\":false}")
+            RELEASE_ID=$(echo "$RELEASE_RESPONSE" | jq -r .id)
+          fi
+          curl -s -X POST \
+               -H "Authorization: Bearer ${{ secrets.PAT_TOKEN }}" \
+               -H "Accept: application/vnd.github+json" \
+               -H "Content-Type: application/vnd.android.package-archive" \
+               --data-binary "@${{ env.APK_FILE }}" \
+               https://uploads.github.com/repos/itsmechinmoy/echo-nightly/releases/$RELEASE_ID/assets?name=${{ env.APK_FILE }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
       - name: Debug File Presence Before Codeberg
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
         run: |
@@ -182,11 +205,10 @@ jobs:
       - name: Prepare and push to Codeberg
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
         run: |
-          TEMP_DIR="temp-$GITHUB_RUN_ID"
-          mkdir -p "$TEMP_DIR"
-          mv latest_run_id.txt latest_commit_sha.txt "$TEMP_DIR/" || echo "No last-sha files to move"
-          echo "Files in $TEMP_DIR after move:"
-          ls -la "$TEMP_DIR"
+          mkdir -p temp
+          mv latest_run_id.txt latest_commit_sha.txt temp/ || echo "No last-sha files to move"
+          echo "Files in temp after move:"
+          ls -la temp
           git remote add codeberg git@codeberg.org:itsmechinmoy/echo.git
           git fetch --unshallow origin || true
           git fetch codeberg --no-tags
@@ -195,7 +217,7 @@ jobs:
           rm -rf "${{ env.APK_FILE }}" artifact.zip artifact_contents/ artifact_url.txt commit_log.txt
           git clean -fdx
           git push codeberg main --force
-          mv "$TEMP_DIR/latest_run_id.txt" "$TEMP_DIR/latest_commit_sha.txt" . || echo "No last-sha files to restore"
+          mv temp/latest_run_id.txt temp/latest_commit_sha.txt . || echo "No last-sha files to restore"
           echo "Files after restore:"
           ls -la
         env:
@@ -208,11 +230,10 @@ jobs:
       - name: Prepare and push to GitLab
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
         run: |
-          TEMP_DIR="temp-$GITHUB_RUN_ID"
-          mkdir -p "$TEMP_DIR"
-          mv latest_run_id.txt latest_commit_sha.txt "$TEMP_DIR/" || echo "No last-sha files to move"
-          echo "Files in $TEMP_DIR after move:"
-          ls -la "$TEMP_DIR"
+          mkdir -p temp
+          mv latest_run_id.txt latest_commit_sha.txt temp/ || echo "No last-sha files to move"
+          echo "Files in temp after move:"
+          ls -la temp
           git remote add gitlab git@gitlab.com:itsmechinmoy/echo.git
           git fetch --unshallow origin || true
           git fetch gitlab --no-tags
@@ -226,7 +247,7 @@ jobs:
           rm -rf "${{ env.APK_FILE }}" artifact.zip artifact_contents/ artifact_url.txt commit_log.txt
           git clean -fdx
           git push gitlab main
-          mv "$TEMP_DIR/latest_run_id.txt" "$TEMP_DIR/latest_commit_sha.txt" . || echo "No last-sha files to restore"
+          mv temp/latest_run_id.txt temp/latest_commit_sha.txt . || echo "No last-sha files to restore"
           echo "Files after restore:"
           ls -la
         env:
