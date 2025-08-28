@@ -109,12 +109,15 @@ jobs:
           if [ -z "$APK_FILE" ]; then echo "No APK found"; exit 1; fi
           COMMIT_SHA=$(cat latest_commit_sha.txt)
           SHORT_SHA=${COMMIT_SHA:0:7}
+          # Create tag name based on timestamp and short SHA
+          TAG_NAME="nightly-$(date +%Y%m%d-%H%M%S)-${SHORT_SHA}"
           mv "$APK_FILE" "Echo-Nightly-${SHORT_SHA}-${{ github.run_id }}.apk"
           SHA256=$(sha256sum "Echo-Nightly-${SHORT_SHA}-${{ github.run_id }}.apk" | awk '{print $1}')
           echo "APK_FILE=Echo-Nightly-${SHORT_SHA}-${{ github.run_id }}.apk" >> $GITHUB_ENV
           echo "APK_SHA256=$SHA256" >> $GITHUB_ENV
           echo "COMMIT_SHA=$COMMIT_SHA" >> $GITHUB_ENV
           echo "SHORT_SHA=$SHORT_SHA" >> $GITHUB_ENV
+          echo "TAG_NAME=$TAG_NAME" >> $GITHUB_ENV
           REPO_URL="https://github.com/brahmkshatriya/echo"
           git fetch upstream --depth=50
           COMMIT_LOGS=$(git log -1 --pretty=format:"● %s ~%an [֍](${REPO_URL}/commit/%H)" $COMMIT_SHA || echo "")
@@ -122,7 +125,7 @@ jobs:
           echo -e "Commits:\n" > commit_log.txt
           echo "$COMMIT_LOGS" | sed 's/●/\n●/g' | sed '/^$/d' >> commit_log.txt
           echo -e "\n---\n### Checksums\n| Variant | SHA-256 |\n| ------- | ------- |\n| Universal | $SHA256 |\n\n" >> commit_log.txt
-          echo -e "<img src=\"https://img.shields.io/github/downloads/itsmechinmoy/echo-nightly/total?style=for-the-badge&label=TOTAL%20DOWNLOADS&labelColor=black&color=white\"/> <img src=\"https://img.shields.io/github/downloads/itsmechinmoy/echo-nightly/${SHORT_SHA}/total?style=for-the-badge&label=CURRENT%20RELEASE&labelColor=black&color=white\"/>" >> commit_log.txt
+          echo -e "<img src=\"https://img.shields.io/github/downloads/itsmechinmoy/echo-nightly/total?style=for-the-badge&label=TOTAL%20DOWNLOADS&labelColor=black&color=white\"/> <img src=\"https://img.shields.io/github/downloads/itsmechinmoy/echo-nightly/${TAG_NAME}/total?style=for-the-badge&label=CURRENT%20RELEASE&labelColor=black&color=white\"/>" >> commit_log.txt
       - name: Ensure commit_log.txt exists
         run: |
           if [ ! -f commit_log.txt ]; then
@@ -140,7 +143,11 @@ jobs:
           RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.PAT_TOKEN }}" \
                          -H "Accept: application/vnd.github+json" \
                          https://api.github.com/repos/itsmechinmoy/echo-nightly/releases)
-          echo "Releases API response: $RESPONSE"
+          if [[ $(echo "$RESPONSE" | jq -r '.message // "success"') != "success" ]]; then
+            echo "Releases API response: $RESPONSE"
+          else
+            echo "Releases API working correctly"
+          fi
       - name: Create or Update GitHub Release
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
         run: |
@@ -154,43 +161,45 @@ jobs:
             echo "Invalid releases API response, exiting"
             exit 1
           fi
-          RELEASE_ID=$(echo "$RESPONSE" | jq -r --arg sha "${{ env.COMMIT_SHA }}" '.[] | select(.target_commitish == $sha) | .id')
+          # Check if release with this tag already exists
+          RELEASE_ID=$(echo "$RESPONSE" | jq -r --arg tag "${{ env.TAG_NAME }}" '.[] | select(.tag_name == $tag) | .id')
           BODY=$(cat commit_log.txt | jq -sR .)
-          if [ -n "$RELEASE_ID" ]; then
-            echo "Updating existing release ID: $RELEASE_ID"
+          if [ -n "$RELEASE_ID" ] && [ "$RELEASE_ID" != "null" ]; then
+            echo "Updating existing release ID: $RELEASE_ID with tag ${{ env.TAG_NAME }}"
             UPDATE_RESPONSE=$(curl -s -X PATCH \
                                    -H "Authorization: Bearer ${{ secrets.PAT_TOKEN }}" \
                                    -H "Accept: application/vnd.github+json" \
                                    https://api.github.com/repos/itsmechinmoy/echo-nightly/releases/$RELEASE_ID \
-                                   -d "{\"target_commitish\":\"${{ env.COMMIT_SHA }}\",\"name\":\"New Echo Nightly Released\",\"body\":$BODY,\"draft\":false,\"prerelease\":false}")
+                                   -d "{\"tag_name\":\"${{ env.TAG_NAME }}\",\"target_commitish\":\"${{ env.COMMIT_SHA }}\",\"name\":\"Echo Nightly ${{ env.TAG_NAME }}\",\"body\":$BODY,\"draft\":false,\"prerelease\":true}")
             echo "Update release response: $UPDATE_RESPONSE"
-            if [[ $(echo "$UPDATE_RESPONSE" | jq -r '.message // empty') ]]; then
+            if [[ $(echo "$UPDATE_RESPONSE" | jq -r '.message // empty') != "empty" ]] && [[ $(echo "$UPDATE_RESPONSE" | jq -r '.id // empty') == "empty" ]]; then
               echo "Failed to update release: $UPDATE_RESPONSE"
               exit 1
             fi
+            FINAL_RELEASE_ID=$RELEASE_ID
           else
-            echo "Creating new release for commit ${{ env.COMMIT_SHA }}"
+            echo "Creating new release for commit ${{ env.COMMIT_SHA }} with tag ${{ env.TAG_NAME }}"
             RELEASE_RESPONSE=$(curl -s -X POST \
                                    -H "Authorization: Bearer ${{ secrets.PAT_TOKEN }}" \
                                    -H "Accept: application/vnd.github+json" \
                                    https://api.github.com/repos/itsmechinmoy/echo-nightly/releases \
-                                   -d "{\"target_commitish\":\"${{ env.COMMIT_SHA }}\",\"name\":\"New Echo Nightly Released\",\"body\":$BODY,\"draft\":false,\"prerelease\":false}")
+                                   -d "{\"tag_name\":\"${{ env.TAG_NAME }}\",\"target_commitish\":\"${{ env.COMMIT_SHA }}\",\"name\":\"Echo Nightly ${{ env.TAG_NAME }}\",\"body\":$BODY,\"draft\":false,\"prerelease\":true}")
             echo "Create release response: $RELEASE_RESPONSE"
-            RELEASE_ID=$(echo "$RELEASE_RESPONSE" | jq -r '.id')
-            if [[ -z "$RELEASE_ID" || "$RELEASE_ID" == "null" ]]; then
+            FINAL_RELEASE_ID=$(echo "$RELEASE_RESPONSE" | jq -r '.id')
+            if [[ -z "$FINAL_RELEASE_ID" || "$FINAL_RELEASE_ID" == "null" ]]; then
               echo "Failed to create release: $RELEASE_RESPONSE"
               exit 1
             fi
           fi
-          echo "Uploading APK to release ID: $RELEASE_ID"
+          echo "Uploading APK to release ID: $FINAL_RELEASE_ID"
           UPLOAD_RESPONSE=$(curl -s -X POST \
                                 -H "Authorization: Bearer ${{ secrets.PAT_TOKEN }}" \
                                 -H "Accept: application/vnd.github+json" \
                                 -H "Content-Type: application/vnd.android.package-archive" \
                                 --data-binary "@${{ env.APK_FILE }}" \
-                                https://uploads.github.com/repos/itsmechinmoy/echo-nightly/releases/$RELEASE_ID/assets?name=${{ env.APK_FILE }})
+                                https://uploads.github.com/repos/itsmechinmoy/echo-nightly/releases/$FINAL_RELEASE_ID/assets?name=${{ env.APK_FILE }})
           echo "Upload APK response: $UPLOAD_RESPONSE"
-          if [[ $(echo "$UPLOAD_RESPONSE" | jq -r '.message // empty') ]]; then
+          if [[ $(echo "$UPLOAD_RESPONSE" | jq -r '.message // empty') != "empty" ]] && [[ $(echo "$UPLOAD_RESPONSE" | jq -r '.id // empty') == "empty" ]]; then
             echo "Failed to upload APK: $UPLOAD_RESPONSE"
             exit 1
           fi
