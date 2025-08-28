@@ -114,7 +114,6 @@ jobs:
           echo "APK_FILE=Echo-Nightly-${SHORT_SHA}-${{ github.run_id }}.apk" >> $GITHUB_ENV
           echo "APK_SHA256=$SHA256" >> $GITHUB_ENV
           echo "COMMIT_SHA=$COMMIT_SHA" >> $GITHUB_ENV
-          # FIX: Set SHORT_SHA as env var for release name
           echo "SHORT_SHA=$SHORT_SHA" >> $GITHUB_ENV
           REPO_URL="https://github.com/brahmkshatriya/echo"
           git fetch upstream --depth=50
@@ -132,26 +131,18 @@ jobs:
           fi
       - name: Create or Update GitHub Release
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
-        uses: ncipollo/release-action@v1
+        uses: softprops/action-gh-release@v2
         with:
-          owner: itsmechinmoy
-          repo: echo-nightly
-          commit: ${{ env.COMMIT_SHA }}
-          # FIX: Use SHORT_SHA env var instead of invalid syntax
+          repository: itsmechinmoy/echo-nightly
+          target_commitish: ${{ env.COMMIT_SHA }}
           name: New Echo Nightly Released (${{ env.SHORT_SHA }})
-          bodyFile: commit_log.txt
-          artifacts: ${{ env.APK_FILE }}
+          body_path: commit_log.txt
+          files: ${{ env.APK_FILE }}
           draft: false
           prerelease: false
           token: ${{ secrets.PAT_TOKEN }}
-          skipIfReleaseExists: false
-          omitBodyDuringUpdate: false
-          omitNameDuringUpdate: false
-          omitPrereleaseDuringUpdate: false
-          replacesArtifacts: false
-          allowUpdates: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
+          fail_on_unmatched_files: true
+          make_latest: true
       - name: Set up SSH for Codeberg and GitLab
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
         run: |
