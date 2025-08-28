@@ -137,7 +137,7 @@ jobs:
           RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.PAT_TOKEN }}" \
                          -H "Accept: application/vnd.github+json" \
                          https://api.github.com/repos/itsmechinmoy/echo-nightly/git/refs/tags/${{ env.RELEASE_TAG }})
-          if echo "$RESPONSE" | jq -e .ref > /dev/null; then
+          if echo "$RESPONSE" | jq -e '.ref // empty' > /dev/null; then
             echo "TAG_EXISTS=true" >> $GITHUB_OUTPUT
           else
             echo "TAG_EXISTS=false" >> $GITHUB_OUTPUT
@@ -174,19 +174,19 @@ jobs:
           token: ${{ secrets.PAT_TOKEN }}
           fail_on_unmatched_files: true
           make_latest: true
-      - name: Set up SSH for Codeberg and GitLab
+      - name: Debug File Presence Before Codeberg
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
         run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -t rsa codeberg.org >> ~/.ssh/known_hosts
-          ssh-keyscan -t rsa gitlab.com >> ~/.ssh/known_hosts
+          echo "Files before Codeberg step:"
+          ls -la
       - name: Prepare and push to Codeberg
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
         run: |
-          mkdir -p temp
-          mv latest_run_id.txt latest_commit_sha.txt temp/ || true
+          TEMP_DIR="temp-$GITHUB_RUN_ID"
+          mkdir -p "$TEMP_DIR"
+          mv latest_run_id.txt latest_commit_sha.txt "$TEMP_DIR/" || echo "No last-sha files to move"
+          echo "Files in $TEMP_DIR after move:"
+          ls -la "$TEMP_DIR"
           git remote add codeberg git@codeberg.org:itsmechinmoy/echo.git
           git fetch --unshallow origin || true
           git fetch codeberg --no-tags
@@ -195,14 +195,24 @@ jobs:
           rm -rf "${{ env.APK_FILE }}" artifact.zip artifact_contents/ artifact_url.txt commit_log.txt
           git clean -fdx
           git push codeberg main --force
-          mv temp/latest_run_id.txt temp/latest_commit_sha.txt . || true
+          mv "$TEMP_DIR/latest_run_id.txt" "$TEMP_DIR/latest_commit_sha.txt" . || echo "No last-sha files to restore"
+          echo "Files after restore:"
+          ls -la
         env:
           GIT_SSH_COMMAND: ssh -i ~/.ssh/id_ed25519
+      - name: Debug File Presence Before GitLab
+        if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
+        run: |
+          echo "Files before GitLab step:"
+          ls -la
       - name: Prepare and push to GitLab
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
         run: |
-          mkdir -p temp
-          mv latest_run_id.txt latest_commit_sha.txt temp/ || true
+          TEMP_DIR="temp-$GITHUB_RUN_ID"
+          mkdir -p "$TEMP_DIR"
+          mv latest_run_id.txt latest_commit_sha.txt "$TEMP_DIR/" || echo "No last-sha files to move"
+          echo "Files in $TEMP_DIR after move:"
+          ls -la "$TEMP_DIR"
           git remote add gitlab git@gitlab.com:itsmechinmoy/echo.git
           git fetch --unshallow origin || true
           git fetch gitlab --no-tags
@@ -216,12 +226,16 @@ jobs:
           rm -rf "${{ env.APK_FILE }}" artifact.zip artifact_contents/ artifact_url.txt commit_log.txt
           git clean -fdx
           git push gitlab main
-          mv temp/latest_run_id.txt temp/latest_commit_sha.txt . || true
+          mv "$TEMP_DIR/latest_run_id.txt" "$TEMP_DIR/latest_commit_sha.txt" . || echo "No last-sha files to restore"
+          echo "Files after restore:"
+          ls -la
         env:
           GIT_SSH_COMMAND: ssh -i ~/.ssh/id_ed25519
-      - name: Debug file presence
+      - name: Debug File Presence Before Upload
         if: always()
-        run: ls -la
+        run: |
+          echo "Files before last-sha upload:"
+          ls -la
       - name: Save and Upload last-sha for future runs
         if: always()
         run: |
