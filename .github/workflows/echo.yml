@@ -64,7 +64,7 @@ jobs:
           echo "LATEST_COMMIT_SHA=$LATEST_COMMIT_SHA" >> $GITHUB_OUTPUT
           echo "$LATEST_RUN_ID" > latest_run_id.txt
           echo "$LATEST_COMMIT_SHA" > latest_commit_sha.txt
-          echo "SHOULD_RELEASE=true" >> $GITHUB_OUTPUT
+          echo "Found latest nightly build: Run ID=$LATEST_RUN_ID, Commit SHA=$LATEST_COMMIT_SHA"
 
       - name: Debug available artifacts
         run: |
@@ -91,6 +91,7 @@ jobs:
         run: |
           LATEST_RUN_ID=$(cat latest_run_id.txt)
           LATEST_COMMIT_SHA=$(cat latest_commit_sha.txt)
+          echo "Latest nightly build: Run ID=$LATEST_RUN_ID, Commit SHA=$LATEST_COMMIT_SHA"
           LAST_RUN_ID=""
           LAST_COMMIT_SHA=""
           if [ -f last_run_id.txt ] && [ -f last_commit_sha.txt ]; then
@@ -99,12 +100,16 @@ jobs:
             echo "Found last-sha artifact: LAST_RUN_ID=$LAST_RUN_ID, LAST_COMMIT_SHA=$LAST_COMMIT_SHA"
           else
             echo "No last-sha artifact found, checking latest release as fallback"
-            # Fetch latest release from itsmechinmoy/echo-nightly
             RELEASE_RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.PAT_TOKEN }}" \
                                    -H "Accept: application/vnd.github+json" \
                                    https://api.github.com/repos/itsmechinmoy/echo-nightly/releases/latest)
-            LAST_COMMIT_SHA=$(echo "$RELEASE_RESPONSE" | jq -r '.target_commitish // ""')
-            echo "Latest release commit SHA: $LAST_COMMIT_SHA"
+            if [ "$(echo "$RELEASE_RESPONSE" | jq -r '.message // ""')" == "Not Found" ]; then
+              echo "No releases found in itsmechinmoy/echo-nightly"
+              LAST_COMMIT_SHA=""
+            else
+              LAST_COMMIT_SHA=$(echo "$RELEASE_RESPONSE" | jq -r '.target_commitish // ""')
+              echo "Latest release commit SHA: $LAST_COMMIT_SHA"
+            fi
           fi
           echo "LATEST_RUN_ID=$LATEST_RUN_ID" >> $GITHUB_OUTPUT
           echo "LAST_RUN_ID=$LAST_RUN_ID" >> $GITHUB_OUTPUT
@@ -235,6 +240,23 @@ jobs:
             last_run_id.txt
             last_commit_sha.txt
           retention-days: 90
+
+      - name: Clean up old artifacts
+        if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
+        run: |
+          echo "Listing old last-sha artifacts"
+          ARTIFACTS=$(curl -s -H "Authorization: Bearer ${{ secrets.PAT_TOKEN }}" \
+                           -H "Accept: application/vnd.github+json" \
+                           https://api.github.com/repos/itsmechinmoy/dantotsu-updater/actions/artifacts \
+                           | jq -r '.artifacts[] | select(.name == "last-sha") | .id')
+          for ARTIFACT_ID in $ARTIFACTS; do
+            echo "Deleting artifact ID: $ARTIFACT_ID"
+            curl -s -X DELETE \
+                 -H "Authorization: Bearer ${{ secrets.PAT_TOKEN }}" \
+                 -H "Accept: application/vnd.github+json" \
+                 https://api.github.com/repos/itsmechinmoy/dantotsu-updater/actions/artifacts/$ARTIFACT_ID
+          done
+          echo "Old artifacts cleaned up"
 
       - name: Set up SSH for Codeberg and GitLab
         if: ${{ steps.compare.outputs.SHOULD_RELEASE == 'true' }}
