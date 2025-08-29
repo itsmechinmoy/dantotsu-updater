@@ -66,6 +66,14 @@ jobs:
           echo "$LATEST_COMMIT_SHA" > latest_commit_sha.txt
           echo "SHOULD_RELEASE=true" >> $GITHUB_OUTPUT
 
+      - name: Debug available artifacts
+        run: |
+          echo "Listing artifacts for itsmechinmoy/dantotsu-updater"
+          curl -s -H "Authorization: Bearer ${{ secrets.PAT_TOKEN }}" \
+               -H "Accept: application/vnd.github+json" \
+               https://api.github.com/repos/itsmechinmoy/dantotsu-updater/actions/artifacts \
+               | jq -r '.artifacts[] | "Name: \(.name), ID: \(.id), Created: \(.created_at), Run ID: \(.workflow_run.id)"'
+
       - name: Download last run ID and commit SHA artifact
         uses: actions/download-artifact@v4
         with:
@@ -86,14 +94,21 @@ jobs:
           if [ -f last_run_id.txt ] && [ -f last_commit_sha.txt ]; then
             LAST_RUN_ID=$(cat last_run_id.txt)
             LAST_COMMIT_SHA=$(cat last_commit_sha.txt)
+            echo "Found last-sha artifact: LAST_RUN_ID=$LAST_RUN_ID, LAST_COMMIT_SHA=$LAST_COMMIT_SHA"
+          else
+            echo "No last-sha artifact found, treating as first run or manual trigger"
           fi
-          echo "LAST_RUN_ID=${LAST_RUN_ID}" >> $GITHUB_OUTPUT
-          echo "LAST_COMMIT_SHA=${LAST_COMMIT_SHA}" >> $GITHUB_OUTPUT
-          if [ "$LATEST_RUN_ID" == "$LAST_RUN_ID" ]; then
-            echo "No new nightly build detected (Run ID: $LATEST_RUN_ID)"
+          echo "LATEST_RUN_ID=$LATEST_RUN_ID" >> $GITHUB_OUTPUT
+          echo "LAST_RUN_ID=$LAST_RUN_ID" >> $GITHUB_OUTPUT
+          echo "LAST_COMMIT_SHA=$LAST_COMMIT_SHA" >> $GITHUB_OUTPUT
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "Manual trigger detected, proceeding with release"
+            echo "SHOULD_RELEASE=true" >> $GITHUB_OUTPUT
+          elif [ -n "$LAST_RUN_ID" ] && [ "$LATEST_RUN_ID" == "$LAST_RUN_ID" ]; then
+            echo "No new nightly build detected (Run ID: $LATEST_RUN_ID matches $LAST_RUN_ID)"
             echo "SHOULD_RELEASE=false" >> $GITHUB_OUTPUT
           else
-            echo "New nightly build detected (Run ID: $LATEST_RUN_ID)"
+            echo "New nightly build detected (Run ID: $LATEST_RUN_ID, Previous: $LAST_RUN_ID)"
             echo "SHOULD_RELEASE=true" >> $GITHUB_OUTPUT
           fi
 
