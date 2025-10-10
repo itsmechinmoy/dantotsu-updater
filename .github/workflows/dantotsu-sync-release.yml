@@ -1,0 +1,219 @@
+name: Build, Release and Sync Dantotsu
+
+permissions:
+  contents: write
+
+on:
+  schedule:
+    - cron: '0 * * * *'  # Run every hour
+  workflow_dispatch:
+
+jobs:
+  check-updates:
+    runs-on: ubuntu-latest
+    outputs:
+      SHOULD_RUN: ${{ steps.compare.outputs.SHOULD_RUN }}
+      LATEST_SHA: ${{ steps.compare.outputs.LATEST_SHA }}
+      VERSION: ${{ steps.version.outputs.VERSION }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          repository: rebelonion/Dantotsu
+          ref: dev
+          fetch-depth: 1
+
+      - name: Download last SHA artifact
+        id: download-last-sha
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          repo: 'itsmechinmoy/Dantotsu-Builder'
+          workflow: merged-workflow.yml
+          name: last-sha
+          path: .
+          allow_forks: true
+        continue-on-error: true
+
+      - name: Check for updates
+        id: compare
+        run: |
+          LATEST_SHA=$(git rev-parse HEAD)
+          echo "LATEST_SHA=${LATEST_SHA}" >> $GITHUB_OUTPUT
+          
+          if [ -f last_sha.txt ]; then
+            LAST_SHA=$(cat last_sha.txt)
+            echo "Last SHA: $LAST_SHA | Latest SHA: $LATEST_SHA"
+          else
+            LAST_SHA=""
+            echo "No previous SHA found. First run detected."
+          fi
+
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ] || [ "$LATEST_SHA" != "$LAST_SHA" ]; then
+            echo "SHOULD_RUN=true" >> $GITHUB_OUTPUT
+            echo "$LATEST_SHA" > last_sha.txt
+          else
+            echo "SHOULD_RUN=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Extract Version
+        if: steps.compare.outputs.SHOULD_RUN == 'true'
+        id: version
+        run: |
+          VER=$(grep -E -o 'versionName "[^"]*"' app/build.gradle | cut -d'"' -f2)
+          VERSION="${VER}+${LATEST_SHA:0:7}"
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
+
+      - name: Upload SHA Artifact
+        if: steps.compare.outputs.SHOULD_RUN == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: last-sha
+          path: last_sha.txt
+          retention-days: 90
+
+  sync:
+    runs-on: ubuntu-latest
+    needs: check-updates
+    if: needs.check-updates.outputs.SHOULD_RUN == 'true'
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          repository: rebelonion/Dantotsu
+          ref: dev
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan codeberg.org gitlab.com >> ~/.ssh/known_hosts
+
+      - name: Sync to Codeberg
+        run: |
+          git remote add codeberg git@codeberg.org:itsmechinmoy/Dantotsu.git
+          git rm -f .github/workflows/codeberg-gitlab-sync.yml 2>/dev/null || true
+          git diff --cached --quiet || git commit -m "Remove sync workflow file"
+          git push codeberg dev --force
+
+      - name: Sync to GitLab
+        run: |
+          git remote add gitlab git@gitlab.com:itsmechinmoy/dantotsu.git
+          git push gitlab dev --force
+
+  build:
+    runs-on: ubuntu-latest
+    needs: [check-updates, sync]
+    if: needs.check-updates.outputs.SHOULD_RUN == 'true'
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          repository: rebelonion/Dantotsu
+          ref: dev
+          fetch-depth: 1
+
+      - name: Generate Commit Log
+        run: |
+          REPO_URL="https://git.rebelonion.dev/rebelonion/Dantotsu"
+          git log -1 --pretty=format:"● %s ~%an [֍](${REPO_URL}/commit/%H)" | \
+            sed -E "s@#([0-9]+)@[#\1](${REPO_URL}/pull/\1)@g" > commit_log.txt
+          echo -e "\nCommits:\n$(cat commit_log.txt)"
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: 17
+          cache: gradle
+
+      - name: Add Split APK Configuration
+        run: |
+          if ! grep -q "splits {" app/build.gradle; then
+            sed -i '/android {/a\
+            \    splits {\
+            \        abi {\
+            \            enable true\
+            \            reset()\
+            \            include "armeabi-v7a", "arm64-v8a", "x86", "x86_64"\
+            \            universalApk true\
+            \        }\
+            \    }' app/build.gradle
+          fi
+
+      - name: Decode Keystore
+        run: echo "${{ secrets.KEYSTORE_FILE }}" | base64 -d > $GITHUB_WORKSPACE/key.keystore
+
+      - name: Build APKs
+        run: |
+          chmod +x ./gradlew
+          ./gradlew assembleGoogleRelease \
+            -Pandroid.injected.signing.store.file=$GITHUB_WORKSPACE/key.keystore \
+            -Pandroid.injected.signing.store.password=${{ secrets.KEYSTORE_PASSWORD }} \
+            -Pandroid.injected.signing.key.alias=${{ secrets.KEY_ALIAS }} \
+            -Pandroid.injected.signing.key.password=${{ secrets.KEY_PASSWORD }}
+
+      - name: Process APKs and Generate Checksums
+        run: |
+          cd app/build/outputs/apk/google/release/
+          
+          # Find universal APK
+          if [ -f "app-google-universal-release.apk" ]; then
+            UNIVERSAL="app-google-universal-release.apk"
+          elif [ -f "app-google-release.apk" ]; then
+            UNIVERSAL="app-google-release.apk"
+          fi
+          
+          # Generate checksums table
+          {
+            echo -e "\n---\n### Checksums\n"
+            echo "| Variant | SHA-256 |"
+            echo "| ------- | ------- |"
+            
+            if [ -n "$UNIVERSAL" ]; then
+              SHA=$(sha256sum "$UNIVERSAL" | cut -d' ' -f1)
+              echo "| Universal | $SHA |"
+            fi
+            
+            for apk in app-google-*-release.apk; do
+              [ "$apk" = "$UNIVERSAL" ] && continue
+              [ "$apk" = "app-google-*-release.apk" ] && continue
+              ABI=$(echo "$apk" | sed 's/app-google-//' | sed 's/-release.apk//')
+              SHA=$(sha256sum "$apk" | cut -d' ' -f1)
+              echo "| $ABI | $SHA |"
+            done
+          } >> $GITHUB_WORKSPACE/commit_log.txt
+
+      - name: Upload APK Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Dantotsu-APKs
+          retention-days: 5
+          compression-level: 9
+          path: app/build/outputs/apk/google/release/*.apk
+
+      - name: Create Release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: v${{ needs.check-updates.outputs.VERSION }}
+          name: Dantotsu v${{ needs.check-updates.outputs.VERSION }}
+          bodyFile: commit_log.txt
+          artifacts: app/build/outputs/apk/google/release/*.apk
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Commit Log Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: commit-log
+          path: commit_log.txt
+          retention-days: 30
