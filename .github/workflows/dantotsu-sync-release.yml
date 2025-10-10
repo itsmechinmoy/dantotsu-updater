@@ -18,11 +18,8 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
-        with:
-          repository: rebelonion/Dantotsu
-          ref: dev
-          fetch-depth: 1
+        run: |
+          git clone --depth 1 --branch dev https://git.rebelonion.dev/rebelonion/Dantotsu.git .
 
       - name: Download last SHA artifact
         id: download-last-sha
@@ -80,11 +77,10 @@ jobs:
     
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
-        with:
-          repository: rebelonion/Dantotsu
-          ref: dev
-          fetch-depth: 0
+        run: |
+          git clone --branch dev https://git.rebelonion.dev/rebelonion/Dantotsu.git .
+          git fetch origin dev
+          git checkout dev
 
       - name: Configure Git
         run: |
@@ -117,11 +113,8 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
-        with:
-          repository: rebelonion/Dantotsu
-          ref: dev
-          fetch-depth: 1
+        run: |
+          git clone --depth 1 --branch dev https://git.rebelonion.dev/rebelonion/Dantotsu.git .
 
       - name: Generate Commit Log
         run: |
