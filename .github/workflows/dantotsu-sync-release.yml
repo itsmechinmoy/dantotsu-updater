@@ -92,6 +92,13 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan codeberg.org gitlab.com >> ~/.ssh/known_hosts
 
+      - name: Sync to GitHub (itsmechinmoy/Dantotsu main)
+        env:
+          GITHUB_PAT: ${{ secrets.DANTOTSU_SYNC }}
+        run: |
+          git remote add github https://$GITHUB_PAT@github.com/itsmechinmoy/Dantotsu.git
+          git push github dev:main --force
+
       - name: Sync to Codeberg
         run: |
           git remote add codeberg git@codeberg.org:itsmechinmoy/Dantotsu.git
@@ -171,12 +178,13 @@ jobs:
         run: |
           cd app/build/outputs/apk/google/release/
           
+          # Find universal APK
           if [ -f "app-google-universal-release.apk" ]; then
             UNIVERSAL="app-google-universal-release.apk"
           elif [ -f "app-google-release.apk" ]; then
             UNIVERSAL="app-google-release.apk"
           fi
-          
+
           {
             echo -e "\n---\n### Checksums\n"
             echo "| Variant | SHA-256 |"
