@@ -22,15 +22,17 @@ jobs:
         run: |
           git clone --depth 1 --branch dev https://git.rebelonion.dev/rebelonion/Dantotsu.git .
 
-      - name: Download last SHA artifact
+      - name: Download last SHA from latest release
         id: download-last-sha
-        uses: dawidd6/action-download-artifact@v6
-        with:
-          repo: 'itsmechinmoy/Dantotsu-Builder'
-          workflow: merged-workflow.yml
-          name: last-sha
-          path: .
-          allow_forks: true
+        run: |
+          LATEST_RELEASE=$(curl -s https://api.github.com/repos/itsmechinmoy/dantotsu-updater/releases/latest)
+          SHA_URL=$(echo "$LATEST_RELEASE" | grep -o 'https://.*last_sha\.txt' | head -1)
+          if [ -n "$SHA_URL" ]; then
+            curl -sL "$SHA_URL" -o last_sha.txt
+            echo "Downloaded last SHA from release"
+          else
+            echo "No last_sha.txt found in latest release"
+          fi
         continue-on-error: true
 
       - name: Check for updates
@@ -65,14 +67,6 @@ jobs:
           VERSION="${VER}+${SHA:0:7}"
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
           echo "Version: $VERSION"
-
-      - name: Upload SHA Artifact
-        if: steps.compare.outputs.SHOULD_RUN == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: last-sha
-          path: last_sha.txt
-          retention-days: 90
 
   sync:
     runs-on: ubuntu-latest
@@ -124,27 +118,19 @@ jobs:
         run: |
           REPO_URL="https://git.rebelonion.dev/rebelonion/Dantotsu"
           
-          # Get last SHA if available
           if [ -n "${{ needs.check-updates.outputs.LAST_SHA }}" ]; then
             LAST_SHA="${{ needs.check-updates.outputs.LAST_SHA }}"
           else
             LAST_SHA=$(git rev-list --max-parents=0 HEAD)
           fi
-          
-          # Get commits since last SHA
           COMMIT_LOGS=$(git log $LAST_SHA..HEAD --pretty=format:"● %s ~%an [֍](${REPO_URL}/commit/%H)" --max-count=10)
           
           if [ -z "$COMMIT_LOGS" ]; then
             COMMIT_LOGS="● No new commits since last release"
           fi
-          
-          # Replace PR references with links
           COMMIT_LOGS=$(echo "$COMMIT_LOGS" | sed -E "s@#([0-9]+)@[#\1](${REPO_URL}/pull/\1)@g")
-          
-          # Write to file
           echo -e "Commits:\n" > commit_log.txt
           echo "$COMMIT_LOGS" | sed 's/●/\n●/g' | sed '/^$/d' >> commit_log.txt
-          
           echo "Commit log generated:"
           cat commit_log.txt
 
@@ -185,14 +171,12 @@ jobs:
         run: |
           cd app/build/outputs/apk/google/release/
           
-          # Find universal APK
           if [ -f "app-google-universal-release.apk" ]; then
             UNIVERSAL="app-google-universal-release.apk"
           elif [ -f "app-google-release.apk" ]; then
             UNIVERSAL="app-google-release.apk"
           fi
           
-          # Generate checksums table
           {
             echo -e "\n---\n### Checksums\n"
             echo "| Variant | SHA-256 |"
@@ -210,6 +194,10 @@ jobs:
               SHA=$(sha256sum "$apk" | cut -d' ' -f1)
               echo "| $ABI | $SHA |"
             done
+            
+            echo -e "\n---\n"
+            CURRENT_TAG_SAFE=$(echo "v${{ needs.check-updates.outputs.VERSION }}" | sed 's/[^a-zA-Z0-9.-]//g')
+            echo "![Total Downloads](https://img.shields.io/github/downloads/itsmechinmoy/dantotsu-updater/total?style=for-the-badge&label=TOTAL%20DOWNLOADS&labelColor=black&color=white) ![Current Release](https://img.shields.io/github/downloads/itsmechinmoy/dantotsu-updater/${CURRENT_TAG_SAFE}/total?style=for-the-badge&label=CURRENT%20RELEASE&labelColor=black&color=white)"
           } >> $GITHUB_WORKSPACE/commit_log.txt
 
       - name: Upload APK Artifacts
@@ -226,7 +214,23 @@ jobs:
           tag: v${{ needs.check-updates.outputs.VERSION }}
           name: Dantotsu v${{ needs.check-updates.outputs.VERSION }}
           bodyFile: commit_log.txt
-          artifacts: app/build/outputs/apk/google/release/*.apk
+          artifacts: |
+            app/build/outputs/apk/google/release/*.apk
+            last_sha.txt
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Save SHA for next run
+        run: |
+          echo "${{ needs.check-updates.outputs.LATEST_SHA }}" > last_sha.txt
+
+      - name: Upload SHA to release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: v${{ needs.check-updates.outputs.VERSION }}
+          artifacts: last_sha.txt
+          allowUpdates: true
+          omitBody: true
+          omitName: true
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Commit Log Artifact
