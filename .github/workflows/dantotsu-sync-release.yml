@@ -125,19 +125,27 @@ jobs:
         run: |
           REPO_URL="https://git.rebelonion.dev/rebelonion/Dantotsu"
           
+          # Get last SHA if available
           if [ -n "${{ needs.check-updates.outputs.LAST_SHA }}" ]; then
             LAST_SHA="${{ needs.check-updates.outputs.LAST_SHA }}"
           else
             LAST_SHA=$(git rev-list --max-parents=0 HEAD)
           fi
+          
+          # Get commits since last SHA
           COMMIT_LOGS=$(git log $LAST_SHA..HEAD --pretty=format:"● %s ~%an [֍](${REPO_URL}/commit/%H)" --max-count=10)
           
           if [ -z "$COMMIT_LOGS" ]; then
             COMMIT_LOGS="● No new commits since last release"
           fi
+          
+          # Replace PR references with links
           COMMIT_LOGS=$(echo "$COMMIT_LOGS" | sed -E "s@#([0-9]+)@[#\1](${REPO_URL}/pull/\1)@g")
+          
+          # Write to file
           echo -e "Commits:\n" > commit_log.txt
           echo "$COMMIT_LOGS" | sed 's/●/\n●/g' | sed '/^$/d' >> commit_log.txt
+          
           echo "Commit log generated:"
           cat commit_log.txt
 
@@ -184,7 +192,8 @@ jobs:
           elif [ -f "app-google-release.apk" ]; then
             UNIVERSAL="app-google-release.apk"
           fi
-
+          
+          # Generate checksums table
           {
             echo -e "\n---\n### Checksums\n"
             echo "| Variant | SHA-256 |"
@@ -204,7 +213,7 @@ jobs:
             done
             
             echo -e "\n---\n"
-            CURRENT_TAG_SAFE=$(echo "v${{ needs.check-updates.outputs.VERSION }}" | sed 's/[^a-zA-Z0-9.-]//g')
+            CURRENT_TAG_SAFE=$(echo "v${{ needs.check-updates.outputs.VERSION }}" | sed 's/+/%2B/g')
             echo "![Total Downloads](https://img.shields.io/github/downloads/itsmechinmoy/dantotsu-updater/total?style=for-the-badge&label=TOTAL%20DOWNLOADS&labelColor=black&color=white) ![Current Release](https://img.shields.io/github/downloads/itsmechinmoy/dantotsu-updater/${CURRENT_TAG_SAFE}/total?style=for-the-badge&label=CURRENT%20RELEASE&labelColor=black&color=white)"
           } >> $GITHUB_WORKSPACE/commit_log.txt
 
