@@ -124,28 +124,20 @@ jobs:
       - name: Generate Commit Log
         run: |
           REPO_URL="https://git.rebelonion.dev/rebelonion/Dantotsu"
-          
-          # Get last SHA if available
+
           if [ -n "${{ needs.check-updates.outputs.LAST_SHA }}" ]; then
             LAST_SHA="${{ needs.check-updates.outputs.LAST_SHA }}"
           else
             LAST_SHA=$(git rev-list --max-parents=0 HEAD)
           fi
-          
-          # Get commits since last SHA
           COMMIT_LOGS=$(git log $LAST_SHA..HEAD --pretty=format:"● %s ~%an [֍](${REPO_URL}/commit/%H)" --max-count=10)
           
           if [ -z "$COMMIT_LOGS" ]; then
             COMMIT_LOGS="● No new commits since last release"
           fi
-          
-          # Replace PR references with links
           COMMIT_LOGS=$(echo "$COMMIT_LOGS" | sed -E "s@#([0-9]+)@[#\1](${REPO_URL}/pull/\1)@g")
-          
-          # Write to file
           echo -e "Commits:\n" > commit_log.txt
           echo "$COMMIT_LOGS" | sed 's/●/\n●/g' | sed '/^$/d' >> commit_log.txt
-          
           echo "Commit log generated:"
           cat commit_log.txt
 
@@ -185,15 +177,13 @@ jobs:
       - name: Process APKs and Generate Checksums
         run: |
           cd app/build/outputs/apk/google/release/
-          
-          # Find universal APK
+
           if [ -f "app-google-universal-release.apk" ]; then
             UNIVERSAL="app-google-universal-release.apk"
           elif [ -f "app-google-release.apk" ]; then
             UNIVERSAL="app-google-release.apk"
           fi
-          
-          # Generate checksums table
+
           {
             echo -e "\n---\n### Checksums\n"
             echo "| Variant | SHA-256 |"
