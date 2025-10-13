@@ -72,7 +72,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: check-updates
     if: needs.check-updates.outputs.SHOULD_RUN == 'true'
-    
+
     steps:
       - name: Checkout Repository
         run: |
@@ -119,7 +119,16 @@ jobs:
     steps:
       - name: Checkout Repository
         run: |
-          git clone --depth 1 --branch dev https://git.rebelonion.dev/rebelonion/Dantotsu.git .
+          git clone --branch dev https://git.rebelonion.dev/rebelonion/Dantotsu.git .
+
+      - name: Fetch full history for commit log
+        run: |
+          if [ -n "${{ needs.check-updates.outputs.LAST_SHA }}" ]; then
+            # Unshallow the repository to get full history
+            git fetch --unshallow || true
+            # Alternatively, fetch enough depth to include the last SHA
+            git fetch --depth=100 origin dev || true
+          fi
 
       - name: Generate Commit Log
         run: |
@@ -127,10 +136,18 @@ jobs:
 
           if [ -n "${{ needs.check-updates.outputs.LAST_SHA }}" ]; then
             LAST_SHA="${{ needs.check-updates.outputs.LAST_SHA }}"
+            
+            # Check if LAST_SHA exists in the repository
+            if git cat-file -e "$LAST_SHA^{commit}" 2>/dev/null; then
+              COMMIT_LOGS=$(git log $LAST_SHA..HEAD --pretty=format:"● %s ~%an [֍](${REPO_URL}/commit/%H)" --max-count=10)
+            else
+              echo "Warning: Last SHA not found in history, showing last 10 commits"
+              COMMIT_LOGS=$(git log HEAD --pretty=format:"● %s ~%an [֍](${REPO_URL}/commit/%H)" --max-count=10)
+            fi
           else
             LAST_SHA=$(git rev-list --max-parents=0 HEAD)
+            COMMIT_LOGS=$(git log $LAST_SHA..HEAD --pretty=format:"● %s ~%an [֍](${REPO_URL}/commit/%H)" --max-count=10)
           fi
-          COMMIT_LOGS=$(git log $LAST_SHA..HEAD --pretty=format:"● %s ~%an [֍](${REPO_URL}/commit/%H)" --max-count=10)
           
           if [ -z "$COMMIT_LOGS" ]; then
             COMMIT_LOGS="● No new commits since last release"
