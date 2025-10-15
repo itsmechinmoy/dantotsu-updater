@@ -63,8 +63,7 @@ jobs:
         run: |
           VER=$(grep -E -o 'versionName "[^"]*"' app/build.gradle | cut -d'"' -f2)
           SHA=$(git rev-parse HEAD)
-          TIMESTAMP=$(date +%Y%m%d-%H%M%S)
-          VERSION="${VER}+${SHA:0:7}-${TIMESTAMP}"
+          VERSION="${VER}+${SHA:0:7}"
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
           echo "Version: $VERSION"
 
@@ -238,10 +237,7 @@ jobs:
           tag: v${{ needs.check-updates.outputs.VERSION }}
           name: Dantotsu v${{ needs.check-updates.outputs.VERSION }}
           bodyFile: commit_log.txt
-          artifacts: |
-            app/build/outputs/apk/google/release/*.apk
-            last_sha.txt
-          allowUpdates: true
+          artifacts: app/build/outputs/apk/google/release/*.apk
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Save SHA for next run
@@ -253,7 +249,6 @@ jobs:
         with:
           tag: v${{ needs.check-updates.outputs.VERSION }}
           artifacts: last_sha.txt
-          allowUpdates: true
           omitBody: true
           omitName: true
           token: ${{ secrets.GITHUB_TOKEN }}
