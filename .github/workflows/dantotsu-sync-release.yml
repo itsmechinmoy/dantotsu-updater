@@ -53,7 +53,6 @@ jobs:
 
           if [ "${{ github.event_name }}" == "workflow_dispatch" ] || [ "$LATEST_SHA" != "$LAST_SHA" ]; then
             echo "SHOULD_RUN=true" >> $GITHUB_OUTPUT
-            echo "$LATEST_SHA" > last_sha.txt
           else
             echo "SHOULD_RUN=false" >> $GITHUB_OUTPUT
           fi
@@ -64,7 +63,8 @@ jobs:
         run: |
           VER=$(grep -E -o 'versionName "[^"]*"' app/build.gradle | cut -d'"' -f2)
           SHA=$(git rev-parse HEAD)
-          VERSION="${VER}+${SHA:0:7}"
+          TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+          VERSION="${VER}+${SHA:0:7}-${TIMESTAMP}"
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
           echo "Version: $VERSION"
 
@@ -241,6 +241,7 @@ jobs:
           artifacts: |
             app/build/outputs/apk/google/release/*.apk
             last_sha.txt
+          allowUpdates: true
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Save SHA for next run
