@@ -250,12 +250,15 @@ jobs:
             curl -X DELETE -H "Authorization: token $GITHUB_TOKEN" \
               "https://api.github.com/repos/${{ github.repository }}/releases/$RELEASE_ID"
             echo "Release deleted."
+            
+            # Delete the tag via API
+            echo "Deleting tag $TAG..."
+            curl -X DELETE -H "Authorization: token $GITHUB_TOKEN" \
+              "https://api.github.com/repos/${{ github.repository }}/git/refs/tags/$TAG" 2>/dev/null || echo "Tag already deleted."
+            echo "Tag deleted."
           else
             echo "No existing release found."
           fi
-          
-          # Delete the tag if it exists
-          git push --delete origin "$TAG" 2>/dev/null || echo "Tag does not exist or already deleted."
 
       - name: Create Release
         uses: ncipollo/release-action@v1
