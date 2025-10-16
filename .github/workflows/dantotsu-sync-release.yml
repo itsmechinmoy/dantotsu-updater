@@ -53,6 +53,7 @@ jobs:
 
           if [ "${{ github.event_name }}" == "workflow_dispatch" ] || [ "$LATEST_SHA" != "$LAST_SHA" ]; then
             echo "SHOULD_RUN=true" >> $GITHUB_OUTPUT
+            echo "$LATEST_SHA" > last_sha.txt
           else
             echo "SHOULD_RUN=false" >> $GITHUB_OUTPUT
           fi
@@ -66,8 +67,6 @@ jobs:
           VERSION="${VER}+${SHA:0:7}"
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
           echo "Version: $VERSION"
-          echo "Debug - LATEST_SHA: ${{ steps.compare.outputs.LATEST_SHA }}"
-          echo "Debug - Current HEAD SHA: $SHA"
 
   sync:
     runs-on: ubuntu-latest
@@ -233,32 +232,13 @@ jobs:
           compression-level: 9
           path: app/build/outputs/apk/google/release/*.apk
 
-      - name: Delete existing release if it exists
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Delete existing tag and release if exists
         run: |
           TAG="v${{ needs.check-updates.outputs.VERSION }}"
-          echo "Checking for existing release with tag: $TAG"
-          
-          # Try to get the release by tag
-          RELEASE_ID=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
-            "https://api.github.com/repos/${{ github.repository }}/releases/tags/$TAG" \
-            | jq -r '.id // empty')
-          
-          if [ -n "$RELEASE_ID" ]; then
-            echo "Found existing release with ID: $RELEASE_ID. Deleting..."
-            curl -X DELETE -H "Authorization: token $GITHUB_TOKEN" \
-              "https://api.github.com/repos/${{ github.repository }}/releases/$RELEASE_ID"
-            echo "Release deleted."
-            
-            # Delete the tag via API
-            echo "Deleting tag $TAG..."
-            curl -X DELETE -H "Authorization: token $GITHUB_TOKEN" \
-              "https://api.github.com/repos/${{ github.repository }}/git/refs/tags/$TAG" 2>/dev/null || echo "Tag already deleted."
-            echo "Tag deleted."
-          else
-            echo "No existing release found."
-          fi
+          gh release delete "$TAG" -y || true
+          git push origin :refs/tags/$TAG || true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create Release
         uses: ncipollo/release-action@v1
@@ -266,7 +246,9 @@ jobs:
           tag: v${{ needs.check-updates.outputs.VERSION }}
           name: Dantotsu v${{ needs.check-updates.outputs.VERSION }}
           bodyFile: commit_log.txt
-          artifacts: app/build/outputs/apk/google/release/*.apk
+          artifacts: |
+            app/build/outputs/apk/google/release/*.apk
+            last_sha.txt
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Save SHA for next run
@@ -278,6 +260,7 @@ jobs:
         with:
           tag: v${{ needs.check-updates.outputs.VERSION }}
           artifacts: last_sha.txt
+          allowUpdates: true
           omitBody: true
           omitName: true
           token: ${{ secrets.GITHUB_TOKEN }}
