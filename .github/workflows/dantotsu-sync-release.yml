@@ -146,13 +146,13 @@ jobs:
             COMMIT_LOGS="● No new commits since last release"
           fi
           COMMIT_LOGS=$(echo "$COMMIT_LOGS" | sed -E "s@#([0-9]+)@[#\1](${REPO_URL}/pull/\1)@g")
+          # Save for Telegram
           echo "COMMIT_LOG<<EOF" >> $GITHUB_OUTPUT
           echo "$COMMIT_LOGS" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
+          # Save base commit log
           echo -e "Commits:\n" > commit_log.txt
           echo "$COMMIT_LOGS" | sed 's/●/\n●/g' | sed '/^$/d' >> commit_log.txt
-          echo "Commit log generated:"
-          cat commit_log.txt
 
       - name: Setup JDK 17
         uses: actions/setup-java@v4
@@ -196,12 +196,11 @@ jobs:
             UNIVERSAL="app-google-release.apk"
           fi
           
-          # Generate changelog for dantotsu-updater
+          # Generate checksums once (same for both repos)
           {
             echo -e "\n---\n### Checksums\n"
             echo "| Variant | SHA-256 |"
             echo "| ------- | ------- |"
-            
             if [ -n "$UNIVERSAL" ]; then
               SHA=$(sha256sum "$UNIVERSAL" | cut -d' ' -f1)
               echo "| Universal | $SHA |"
@@ -214,33 +213,24 @@ jobs:
               echo "| $ABI | $SHA |"
             done
             echo -e "\n---\n"
-            CURRENT_TAG_SAFE=$(echo "v${{ needs.check-updates.outputs.VERSION }}" | sed 's/+/%2B/g')
-            echo "![Total Downloads](https://img.shields.io/github/downloads/itsmechinmoy/dantotsu-updater/total?style=for-the-badge&label=TOTAL%20DOWNLOADS&labelColor=black&color=white) ![Current Release](https://img.shields.io/github/downloads/itsmechinmoy/dantotsu-updater/${CURRENT_TAG_SAFE}/total?style=for-the-badge&label=CURRENT%20RELEASE&labelColor=black&color=white)"
-          } >> $GITHUB_WORKSPACE/commit_log_updater.txt
-
-          # Generate changelog for main Dantotsu repo
+          } > $GITHUB_WORKSPACE/checksums.txt
+          
+          # Create release notes for dantotsu-updater
           cd $GITHUB_WORKSPACE
           {
             cat commit_log.txt
-            echo -e "\n---\n### Checksums\n"
-            echo "| Variant | SHA-256 |"
-            echo "| ------- | ------- |"
-            cd app/build/outputs/apk/google/release/
-            if [ -n "$UNIVERSAL" ]; then
-              SHA=$(sha256sum "$UNIVERSAL" | cut -d' ' -f1)
-              echo "| Universal | $SHA |"
-            fi
-            for apk in app-google-*-release.apk; do
-              [ "$apk" = "$UNIVERSAL" ] && continue
-              [ "$apk" = "app-google-*-release.apk" ] && continue
-              ABI=$(echo "$apk" | sed 's/app-google-//' | sed 's/-release.apk//')
-              SHA=$(sha256sum "$apk" | cut -d' ' -f1)
-              echo "| $ABI | $SHA |"
-            done
-            echo -e "\n---\n"
+            cat checksums.txt
+            CURRENT_TAG_SAFE=$(echo "v${{ needs.check-updates.outputs.VERSION }}" | sed 's/+/%2B/g')
+            echo "![Total Downloads](https://img.shields.io/github/downloads/itsmechinmoy/dantotsu-updater/total?style=for-the-badge&label=TOTAL%20DOWNLOADS&labelColor=black&color=white) ![Current Release](https://img.shields.io/github/downloads/itsmechinmoy/dantotsu-updater/${CURRENT_TAG_SAFE}/total?style=for-the-badge&label=CURRENT%20RELEASE&labelColor=black&color=white)"
+          } > commit_log_updater.txt
+  
+          # Create release notes for Dantotsu
+          {
+            cat commit_log.txt
+            cat checksums.txt
             CURRENT_TAG_SAFE=$(echo "v${{ needs.check-updates.outputs.VERSION }}" | sed 's/+/%2B/g')
             echo "![Total Downloads](https://img.shields.io/github/downloads/itsmechinmoy/Dantotsu/total?style=for-the-badge&label=TOTAL%20DOWNLOADS&labelColor=black&color=white) ![Current Release](https://img.shields.io/github/downloads/itsmechinmoy/Dantotsu/${CURRENT_TAG_SAFE}/total?style=for-the-badge&label=CURRENT%20RELEASE&labelColor=black&color=white)"
-          } > $GITHUB_WORKSPACE/commit_log_dantotsu.txt
+          } > commit_log_dantotsu.txt
 
       - name: Upload APK Artifacts
         uses: actions/upload-artifact@v4
@@ -264,12 +254,16 @@ jobs:
             echo "No universal APK found!"
             exit 1
           fi
+          
+          # Format commit messages for Telegram
           telegram_commit_messages=$(echo "$COMMIT_LOG" | while read -r line; do
             message=$(echo "$line" | sed -E 's/● (.*) ~(.*) \[֍\]\((.*)\)/● \1 ~\2 <a href="\3">֍<\/a>/')
             message=$(echo "$message" | sed -E 's/\[#([0-9]+)\]\((https:\/\/[^)]+)\)/<a href="\2">#\1<\/a>/g')
             echo "$message"
           done)
           telegram_commit_messages="<blockquote>${telegram_commit_messages}</blockquote>"
+          
+          # Upload APK to Telegram
           response=$(curl -sS -f -X POST \
             "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendDocument" \
             -F "chat_id=-1003463471716" \
@@ -281,11 +275,17 @@ jobs:
             -F "parse_mode=HTML")
           echo "Telegram upload response: $response"
 
+      - name: Save SHA for next run
+        run: |
+          echo "${{ needs.check-updates.outputs.LATEST_SHA }}" > last_sha.txt
+
       - name: Delete existing tags and releases if exists
         run: |
           TAG="v${{ needs.check-updates.outputs.VERSION }}"
+          # Delete from dantotsu-updater
           gh release delete "$TAG" -y --repo itsmechinmoy/dantotsu-updater || true
           git push https://${{ secrets.GITHUB_TOKEN }}@github.com/itsmechinmoy/dantotsu-updater.git :refs/tags/$TAG || true
+          # Delete from Dantotsu
           gh release delete "$TAG" -y --repo itsmechinmoy/Dantotsu || true
           git push https://${{ secrets.DANTOTSU_SYNC }}@github.com/itsmechinmoy/Dantotsu.git :refs/tags/$TAG || true
         env:
@@ -301,8 +301,6 @@ jobs:
             app/build/outputs/apk/google/release/*.apk
             last_sha.txt
           token: ${{ secrets.GITHUB_TOKEN }}
-          repo: dantotsu-updater
-          owner: itsmechinmoy
 
       - name: Create Release in Dantotsu
         uses: ncipollo/release-action@v1
@@ -313,22 +311,6 @@ jobs:
           artifacts: app/build/outputs/apk/google/release/*.apk
           token: ${{ secrets.DANTOTSU_SYNC }}
           repo: Dantotsu
-          owner: itsmechinmoy
-
-      - name: Save SHA for next run
-        run: |
-          echo "${{ needs.check-updates.outputs.LATEST_SHA }}" > last_sha.txt
-
-      - name: Upload SHA to dantotsu-updater release
-        uses: ncipollo/release-action@v1
-        with:
-          tag: v${{ needs.check-updates.outputs.VERSION }}
-          artifacts: last_sha.txt
-          allowUpdates: true
-          omitBody: true
-          omitName: true
-          token: ${{ secrets.GITHUB_TOKEN }}
-          repo: dantotsu-updater
           owner: itsmechinmoy
 
       - name: Upload Commit Log Artifact
