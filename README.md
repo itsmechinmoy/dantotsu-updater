@@ -1,6 +1,5 @@
 # Hourly Preview Release of Dantotsu
-This repository **is not a fork** of Dantotsu.
-This project automatically compiles the upstream **dev branch** of the official Dantotsu repository:  
+This repository **is not a fork** of Dantotsu, it just automatically compiles the upstream **dev branch** of the official Dantotsu repository:  
 ➡️ [rebelonion/Dantotsu (dev branch)](https://git.rebelonion.dev/rebelonion/Dantotsu/src/branch/dev)
 
 Every hour, the workflow checks for new commits.  
