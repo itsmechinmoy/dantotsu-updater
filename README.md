@@ -1,28 +1,40 @@
 # Hourly Preview Release of Dantotsu
+This repository **is not a fork** of Dantotsu.
+This project automatically compiles the upstream **dev branch** of the official Dantotsu repository:  
+➡️ [rebelonion/Dantotsu (dev branch)](https://git.rebelonion.dev/rebelonion/Dantotsu/src/branch/dev)
 
-This repository automatically checks for updates and builds [**Dantotsu**](https://git.rebelonion.dev/rebelonion/Dantotsu/src/branch/dev) **every hour**.  
-When new commits are detected, a new release is automatically created with the latest build.<br>
+Every hour, the workflow checks for new commits.  
+If upstream changes → a fresh APK gets built and released here.
+
+Development is done entirely by [**rebelonion**](https://git.rebelonion.dev/rebelonion) and other official contributors.  
+I do **not** modify the code — just automate builds so users can test the latest **dev** updates quickly.
+
 You can easily add this build to your [**Obtainium**](https://apps.obtainium.imranr.dev/redirect?r=obtainium://app/%7B%22id%22%3A%22ani.dantotsu%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2Fitsmechinmoy%2Fdantotsu-updater%22%2C%22author%22%3A%22itsmechinmoy%22%2C%22name%22%3A%22Dantotsu%22%2C%22preferredApkIndex%22%3A0%2C%22additionalSettings%22%3A%22%7B%5C%22includePrereleases%5C%22%3Atrue%2C%5C%22fallbackToOlderReleases%5C%22%3Atrue%2C%5C%22filterReleaseTitlesByRegEx%5C%22%3A%5C%22%5C%22%2C%5C%22filterReleaseNotesByRegEx%5C%22%3A%5C%22%5C%22%2C%5C%22verifyLatestTag%5C%22%3Atrue%2C%5C%22sortMethodChoice%5C%22%3A%5C%22date%5C%22%2C%5C%22useLatestAssetDateAsReleaseDate%5C%22%3Afalse%2C%5C%22releaseTitleAsVersion%5C%22%3Afalse%2C%5C%22trackOnly%5C%22%3Afalse%2C%5C%22versionExtractionRegEx%5C%22%3A%5C%22%5C%22%2C%5C%22matchGroupToUse%5C%22%3A%5C%22%5C%22%2C%5C%22versionDetection%5C%22%3Atrue%2C%5C%22releaseDateAsVersion%5C%22%3Afalse%2C%5C%22useVersionCodeAsOSVersion%5C%22%3Afalse%2C%5C%22apkFilterRegEx%5C%22%3A%5C%22%5C%22%2C%5C%22invertAPKFilter%5C%22%3Afalse%2C%5C%22autoApkFilterByArch%5C%22%3Atrue%2C%5C%22appName%5C%22%3A%5C%22%5C%22%2C%5C%22appAuthor%5C%22%3A%5C%22%5C%22%2C%5C%22shizukuPretendToBeGooglePlay%5C%22%3Afalse%2C%5C%22allowInsecure%5C%22%3Afalse%2C%5C%22exemptFromBackgroundUpdates%5C%22%3Afalse%2C%5C%22skipUpdateNotifications%5C%22%3Afalse%2C%5C%22about%5C%22%3A%5C%22%5C%22%2C%5C%22refreshBeforeDownload%5C%22%3Afalse%2C%5C%22github-creds%5C%22%3A%5C%22%5C%22%7D%22%2C%22overrideSource%22%3A%22GitHub%22%7D).
 
 ---
 
-## Annoyances
-
-1. **Manual Build Triggers**  
-   Builds can be triggered manually if needed (by me).
-
-2. **Different Signatures**  
-   This build uses different signing keys from the official version. As a result:
-   - You cannot install both versions simultaneously.  
-   - Installing one prevents the other from updating.  
-
-3. **No Empty Releases**  
-   Builds are skipped if there are no new commits since the last release.
-
+## Notes
+1. **Not a fork**
+   - All source code belongs to the original developers
+   - This repo only compiles the latest upstream dev branch changes
+2. **Different app signatures**
+   - This build uses different signing keys from the official version  
+   - You cannot install both at the same time  
+   - Switching versions requires uninstalling the other
+3. **No empty releases**
+   - If there are no new commits → no new release
+4. **Manual build triggers**
+   - Builds can be triggered manually if required
 ---
 
 ## Issues
 
 If you encounter any problems with this build, please [report them here](https://git.rebelonion.dev/rebelonion/Dantotsu/issues).
+
+---
+
+## Credits
+
+Full credit goes to [**rebelonion**](https://git.rebelonion.dev/rebelonion) and the amazing [official contributors](https://git.rebelonion.dev/rebelonion/Dantotsu/activity/contributors) developing Dantotsu.
 
 ---
