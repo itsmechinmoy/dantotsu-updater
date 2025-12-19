@@ -130,7 +130,19 @@ jobs:
           unzip AnimatedBottomBar.zip "**/*.aar" -d /tmp/abb
           AAR=$(find /tmp/abb -name "*.aar" | head -n 1)
           cp "$AAR" app/libs/AnimatedBottomBar.aar
-  
+
+      - name: Download FlexboxLayout AAR
+        run: |
+          mkdir -p app/libs
+          curl -L -o app/libs/flexbox-3.0.0.aar \
+          https://dl.google.com/android/maven2/com/google/android/flexbox/flexbox/3.0.0/flexbox-3.0.0.aar
+
+      - name: Add local FlexboxLayout dependency
+        run: |
+          sed -i '/dependencies {/a\    implementation(name: '\''flexbox-3.0.0'\'', ext: '\''aar'\'')' app/build.gradle
+          echo "=== Added local Flexbox dependency ==="
+          grep "flexbox-3.0.0" app/build.gradle
+
       - name: Add flatDir to settings.gradle
         run: |
           # Add flatDir to the existing repositories block in settings.gradle.kts
