@@ -121,27 +121,15 @@ jobs:
 
       - name: Download AnimatedBottomBar ZIP
         run: |
-         curl -L -o AnimatedBottomBar.zip \
-         https://raw.githubusercontent.com/Shebyyy/Dantotsu-Alpha/main/AnimatedBottomBar.zip
-  
+          curl -L -o AnimatedBottomBar.zip \
+          https://github.com/itsmechinmoy/dantotsu-updater/raw/refs/heads/main/AnimatedBottomBar.zip
+
       - name: Extract AnimatedBottomBar AAR
         run: |
           mkdir -p app/libs
           unzip AnimatedBottomBar.zip "**/*.aar" -d /tmp/abb
           AAR=$(find /tmp/abb -name "*.aar" | head -n 1)
           cp "$AAR" app/libs/AnimatedBottomBar.aar
-
-      - name: Download FlexboxLayout AAR
-        run: |
-          mkdir -p app/libs
-          curl -L -o app/libs/flexbox-3.0.0.aar \
-          https://dl.google.com/android/maven2/com/google/android/flexbox/flexbox/3.0.0/flexbox-3.0.0.aar
-
-      - name: Add local FlexboxLayout dependency
-        run: |
-          sed -i '/dependencies {/a\    implementation(name: '\''flexbox-3.0.0'\'', ext: '\''aar'\'')' app/build.gradle
-          echo "=== Added local Flexbox dependency ==="
-          grep "flexbox-3.0.0" app/build.gradle
 
       - name: Add flatDir to settings.gradle
         run: |
@@ -150,7 +138,7 @@ jobs:
           
           echo "=== Modified settings.gradle.kts ==="
           cat settings.gradle.kts
-  
+
       - name: Replace AnimatedBottomBar dependency
         run: |
           sed -i "s|implementation 'com.github.RepoDevil:AnimatedBottomBar:7fcb9af'|implementation(name: 'AnimatedBottomBar', ext: 'aar')|g" app/build.gradle
