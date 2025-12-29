@@ -1,0 +1,57 @@
+name: 🎂 Dartotsu Birthday
+
+on:
+  # 00:00 IST on 25 Jul  →  18:30 UTC on 24 Jul
+  schedule:
+    - cron: '30 18 24 7 *'
+  workflow_dispatch:
+
+jobs:
+  announce:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Calculate project age
+        id: age
+        run: |
+          BIRTH_YEAR=2024
+          CURRENT_YEAR=$(TZ=Asia/Kolkata date +%Y)
+          AGE=$(( CURRENT_YEAR - BIRTH_YEAR ))
+
+          if [ "$AGE" -eq 1 ]; then
+            AGE_TEXT="${AGE} year old"
+          else
+            AGE_TEXT="${AGE} years old"
+          fi
+
+          echo "age_text=$AGE_TEXT" >> "$GITHUB_OUTPUT"
+
+      - name: Send Discord embed
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL_DARTOTSU }}
+        run: |
+          AGE_TEXT="${{ steps.age.outputs.age_text }}"
+          CONTENT='||@everyone ||'
+
+          DESCRIPTION=$(printf "[Dartotsu](<https://github.com/aayush2622/Dartotsu>) is now %s 🥳\nThe [initial commit](<https://github.com/aayush2622/Dartotsu/commit/ac685a9397e529d6db3c5f7dcd00e1c23f011527>) was done <t:1721848369:R>\n\n[⭐️ Star](<https://github.com/aayush2622/Dartotsu>) the repo as a birthday gift 😚" "$AGE_TEXT")
+
+          JSON=$(jq -n \
+            --arg content "$CONTENT" \
+            --arg desc "$DESCRIPTION" \
+            '{
+              content: $content,
+              embeds: [
+                {
+                  title: "🎂 Dartotsu Anniversary",
+                  description: $desc,
+                  color: 0,
+                  image: {
+                    url: "https://media.tenor.com/g4LQl7KK1XcAAAAM/party.gif"
+                  }
+                }
+              ]
+            }')
+
+          curl -X POST -H "Content-Type: application/json" \
+               -d "$JSON" \
+               "$DISCORD_WEBHOOK_URL"
