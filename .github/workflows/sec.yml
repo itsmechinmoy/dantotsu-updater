@@ -1,0 +1,73 @@
+name: Copy Selected Secrets To Better Dantotsu
+
+on:
+  workflow_dispatch:
+
+jobs:
+  copy-and-backup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Install GH CLI
+        run: |
+          sudo apt update
+          sudo apt install gh -y
+
+      - name: Login GitHub CLI
+        run: |
+          echo "${{ secrets.PAT_TOKEN }}" | gh auth login --with-token
+
+      - name: Copy Secrets to Repository
+        env:
+          KEYSTORE_FILE: ${{ secrets.KEYSTORE_FILE }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
+
+        run: |
+          echo "Copying secrets to itsmechinmoy/better-dantotsu..."
+
+          gh secret set KEYSTORE_FILE -b"$KEYSTORE_FILE" --repo itsmechinmoy/better-dantotsu
+          gh secret set KEYSTORE_PASSWORD -b"$KEYSTORE_PASSWORD" --repo itsmechinmoy/better-dantotsu
+          gh secret set KEY_ALIAS -b"$KEY_ALIAS" --repo itsmechinmoy/better-dantotsu
+          gh secret set KEY_PASSWORD -b"$KEY_PASSWORD" --repo itsmechinmoy/better-dantotsu
+          gh secret set PAT_TOKEN -b"$PAT_TOKEN" --repo itsmechinmoy/better-dantotsu
+
+          echo "✅ Secrets copied successfully!"
+
+      - name: Create Secrets Backup File
+        run: |
+          echo "Creating secrets backup file..."
+          
+          # Create a file with the secrets (BE CAREFUL - THIS EXPOSES THEM)
+          cat > secrets-backup.txt << EOF
+          # Secrets Backup - Created on $(date)
+          # WARNING: This file contains sensitive information!
+          
+          KEYSTORE_FILE=${{ secrets.KEYSTORE_FILE }}
+          KEYSTORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS=${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}
+          PAT_TOKEN=${{ secrets.PAT_TOKEN }}
+          
+          # Created by GitHub Actions workflow
+          EOF
+          
+          echo "Backup file created"
+
+      - name: Upload Secrets Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: secrets-backup
+          path: secrets-backup.txt
+          retention-days: 7  # Artifact will be kept for 7 days
+          
+      - name: Completion Message
+        run: |
+          echo "==================================="
+          echo "✅ Process completed!"
+          echo "Secrets copied to: itsmechinmoy/better-dantotsu"
+          echo "📦 Secrets backup artifact created (will be available for 7 days)"
+          echo "⚠️  IMPORTANT: Download and delete the artifact immediately!"
+          echo "==================================="
