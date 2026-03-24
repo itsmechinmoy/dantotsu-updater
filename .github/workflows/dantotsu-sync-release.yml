@@ -18,24 +18,26 @@ jobs:
       VERSION: ${{ steps.version.outputs.VERSION }}
 
     steps:
-      - name: Setup Forgejo SSH
+      - name: Setup SSH Agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.FORGEJO_SSH_KEY }}
+          ssh-passphrase: ${{ secrets.FORGEJO_PASSPHRASE }}
+
+      - name: Setup SSH Config
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.FORGEJO_SSH_KEY }}" > ~/.ssh/forgejo_key
-          chmod 600 ~/.ssh/forgejo_key
           ssh-keyscan -p 2222 gitssh.rebelonion.dev >> ~/.ssh/known_hosts
           cat <<EOF > ~/.ssh/config
           Host gitssh.rebelonion.dev
             HostName gitssh.rebelonion.dev
             Port 2222
             User git
-            IdentityFile ~/.ssh/forgejo_key
             IdentitiesOnly yes
           EOF
 
       - name: Checkout Repository
         run: |
-          # Using the Host Alias from ssh/config to force usage of forgejo_key
           git clone --depth 1 --branch dev gitssh.rebelonion.dev:rebelonion/Dantotsu.git .
 
       - name: Download last SHA from latest release
@@ -88,18 +90,24 @@ jobs:
     if: needs.check-updates.outputs.SHOULD_RUN == 'true'
 
     steps:
-      - name: Setup Forgejo SSH
+      - name: Setup SSH Agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: |
+            ${{ secrets.FORGEJO_SSH_KEY }}
+            ${{ secrets.SSH_PRIVATE_KEY }}
+          ssh-passphrase: ${{ secrets.FORGEJO_PASSPHRASE }}
+
+      - name: Setup SSH Config
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.FORGEJO_SSH_KEY }}" > ~/.ssh/forgejo_key
-          chmod 600 ~/.ssh/forgejo_key
           ssh-keyscan -p 2222 gitssh.rebelonion.dev >> ~/.ssh/known_hosts
+          ssh-keyscan codeberg.org gitlab.com >> ~/.ssh/known_hosts
           cat <<EOF > ~/.ssh/config
           Host gitssh.rebelonion.dev
             HostName gitssh.rebelonion.dev
             Port 2222
             User git
-            IdentityFile ~/.ssh/forgejo_key
             IdentitiesOnly yes
           EOF
 
@@ -113,12 +121,6 @@ jobs:
         run: |
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
-
-      - name: Setup SSH
-        run: |
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan codeberg.org gitlab.com >> ~/.ssh/known_hosts
 
       - name: Sync to GitHub (itsmechinmoy/Dantotsu main)
         env:
@@ -145,18 +147,21 @@ jobs:
     if: needs.check-updates.outputs.SHOULD_RUN == 'true'
 
     steps:
-      - name: Setup Forgejo SSH
+      - name: Setup SSH Agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.FORGEJO_SSH_KEY }}
+          ssh-passphrase: ${{ secrets.FORGEJO_PASSPHRASE }}
+
+      - name: Setup SSH Config
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.FORGEJO_SSH_KEY }}" > ~/.ssh/forgejo_key
-          chmod 600 ~/.ssh/forgejo_key
           ssh-keyscan -p 2222 gitssh.rebelonion.dev >> ~/.ssh/known_hosts
           cat <<EOF > ~/.ssh/config
           Host gitssh.rebelonion.dev
             HostName gitssh.rebelonion.dev
             Port 2222
             User git
-            IdentityFile ~/.ssh/forgejo_key
             IdentitiesOnly yes
           EOF
 
