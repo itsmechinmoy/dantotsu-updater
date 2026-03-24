@@ -22,11 +22,12 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y sshpass
           mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
           echo "${{ secrets.FORGEJO_SSH_KEY }}" > ~/.ssh/forgejo_key
           chmod 600 ~/.ssh/forgejo_key
           ssh-keyscan -p 2222 gitssh.rebelonion.dev >> ~/.ssh/known_hosts
           eval $(ssh-agent)
-          sshpass -p "${{ secrets.FORGEJO_SSH_PASSPHRASE }}" ssh-add ~/.ssh/forgejo_key
+          sshpass -p "${{ secrets.FORGEJO_SSH_PASSPHRASE }}" ssh-add ~/.ssh/forgejo_key < /dev/null
           echo "Host gitssh.rebelonion.dev
             HostName gitssh.rebelonion.dev
             Port 2222
@@ -90,11 +91,12 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y sshpass
           mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
           echo "${{ secrets.FORGEJO_SSH_KEY }}" > ~/.ssh/forgejo_key
           chmod 600 ~/.ssh/forgejo_key
           ssh-keyscan -p 2222 gitssh.rebelonion.dev >> ~/.ssh/known_hosts
           eval $(ssh-agent)
-          sshpass -p "${{ secrets.FORGEJO_SSH_PASSPHRASE }}" ssh-add ~/.ssh/forgejo_key
+          sshpass -p "${{ secrets.FORGEJO_SSH_PASSPHRASE }}" ssh-add ~/.ssh/forgejo_key < /dev/null
           echo "Host gitssh.rebelonion.dev
             HostName gitssh.rebelonion.dev
             Port 2222
@@ -147,11 +149,12 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y sshpass
           mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
           echo "${{ secrets.FORGEJO_SSH_KEY }}" > ~/.ssh/forgejo_key
           chmod 600 ~/.ssh/forgejo_key
           ssh-keyscan -p 2222 gitssh.rebelonion.dev >> ~/.ssh/known_hosts
           eval $(ssh-agent)
-          sshpass -p "${{ secrets.FORGEJO_SSH_PASSPHRASE }}" ssh-add ~/.ssh/forgejo_key
+          sshpass -p "${{ secrets.FORGEJO_SSH_PASSPHRASE }}" ssh-add ~/.ssh/forgejo_key < /dev/null
           echo "Host gitssh.rebelonion.dev
             HostName gitssh.rebelonion.dev
             Port 2222
