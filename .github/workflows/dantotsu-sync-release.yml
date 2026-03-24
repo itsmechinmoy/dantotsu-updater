@@ -18,21 +18,40 @@ jobs:
       VERSION: ${{ steps.version.outputs.VERSION }}
 
     steps:
-      - name: Setup SSH Agent
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.FORGEJO_SSH_KEY }}
-          ssh-passphrase: ${{ secrets.FORGEJO_PASSPHRASE }}
+      - name: Install Expect
+        run: sudo apt-get update && sudo apt-get install -y expect
+
+      - name: Setup SSH Agent with Passphrase
+        env:
+          SSH_KEY: ${{ secrets.FORGEJO_SSH_KEY }}
+          PASSPHRASE: ${{ secrets.FORGEJO_PASSPHRASE }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/forgejo_key
+          chmod 600 ~/.ssh/forgejo_key
+          
+          # Start agent and save env vars for the rest of the job
+          eval $(ssh-agent -s)
+          echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" >> $GITHUB_ENV
+          echo "SSH_AGENT_PID=$SSH_AGENT_PID" >> $GITHUB_ENV
+          
+          # Use expect to handle the passphrase prompt
+          expect <<EOF
+            spawn ssh-add /home/runner/.ssh/forgejo_key
+            expect "Enter passphrase"
+            send "$PASSPHRASE\r"
+            expect eof
+          EOF
 
       - name: Setup SSH Config
         run: |
-          mkdir -p ~/.ssh
           ssh-keyscan -p 2222 gitssh.rebelonion.dev >> ~/.ssh/known_hosts
           cat <<EOF > ~/.ssh/config
           Host gitssh.rebelonion.dev
             HostName gitssh.rebelonion.dev
             Port 2222
             User git
+            IdentityFile ~/.ssh/forgejo_key
             IdentitiesOnly yes
           EOF
 
@@ -90,17 +109,36 @@ jobs:
     if: needs.check-updates.outputs.SHOULD_RUN == 'true'
 
     steps:
-      - name: Setup SSH Agent
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: |
-            ${{ secrets.FORGEJO_SSH_KEY }}
-            ${{ secrets.SSH_PRIVATE_KEY }}
-          ssh-passphrase: ${{ secrets.FORGEJO_PASSPHRASE }}
+      - name: Install Expect
+        run: sudo apt-get update && sudo apt-get install -y expect
+
+      - name: Setup SSH Agent with Passphrase
+        env:
+          SSH_KEY: ${{ secrets.FORGEJO_SSH_KEY }}
+          PASSPHRASE: ${{ secrets.FORGEJO_PASSPHRASE }}
+          OTHER_SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/forgejo_key
+          echo "$OTHER_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/forgejo_key ~/.ssh/id_ed25519
+          
+          eval $(ssh-agent -s)
+          echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" >> $GITHUB_ENV
+          echo "SSH_AGENT_PID=$SSH_AGENT_PID" >> $GITHUB_ENV
+          
+          expect <<EOF
+            spawn ssh-add /home/runner/.ssh/forgejo_key
+            expect "Enter passphrase"
+            send "$PASSPHRASE\r"
+            expect eof
+          EOF
+          
+          # Add the sync key (assuming no passphrase for this one)
+          ssh-add ~/.ssh/id_ed25519
 
       - name: Setup SSH Config
         run: |
-          mkdir -p ~/.ssh
           ssh-keyscan -p 2222 gitssh.rebelonion.dev >> ~/.ssh/known_hosts
           ssh-keyscan codeberg.org gitlab.com >> ~/.ssh/known_hosts
           cat <<EOF > ~/.ssh/config
@@ -108,6 +146,7 @@ jobs:
             HostName gitssh.rebelonion.dev
             Port 2222
             User git
+            IdentityFile ~/.ssh/forgejo_key
             IdentitiesOnly yes
           EOF
 
@@ -147,21 +186,38 @@ jobs:
     if: needs.check-updates.outputs.SHOULD_RUN == 'true'
 
     steps:
-      - name: Setup SSH Agent
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.FORGEJO_SSH_KEY }}
-          ssh-passphrase: ${{ secrets.FORGEJO_PASSPHRASE }}
+      - name: Install Expect
+        run: sudo apt-get update && sudo apt-get install -y expect
+
+      - name: Setup SSH Agent with Passphrase
+        env:
+          SSH_KEY: ${{ secrets.FORGEJO_SSH_KEY }}
+          PASSPHRASE: ${{ secrets.FORGEJO_PASSPHRASE }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/forgejo_key
+          chmod 600 ~/.ssh/forgejo_key
+          
+          eval $(ssh-agent -s)
+          echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" >> $GITHUB_ENV
+          echo "SSH_AGENT_PID=$SSH_AGENT_PID" >> $GITHUB_ENV
+          
+          expect <<EOF
+            spawn ssh-add /home/runner/.ssh/forgejo_key
+            expect "Enter passphrase"
+            send "$PASSPHRASE\r"
+            expect eof
+          EOF
 
       - name: Setup SSH Config
         run: |
-          mkdir -p ~/.ssh
           ssh-keyscan -p 2222 gitssh.rebelonion.dev >> ~/.ssh/known_hosts
           cat <<EOF > ~/.ssh/config
           Host gitssh.rebelonion.dev
             HostName gitssh.rebelonion.dev
             Port 2222
             User git
+            IdentityFile ~/.ssh/forgejo_key
             IdentitiesOnly yes
           EOF
 
@@ -246,7 +302,6 @@ jobs:
             UNIVERSAL="app-google-release.apk"
           fi
           
-          # Generate checksums once
           {
             echo -e "\n---\n### Checksums\n"
             echo "| Variant | SHA-256 |"
@@ -265,7 +320,6 @@ jobs:
             echo -e "\n---\n"
           } > $GITHUB_WORKSPACE/checksums.txt
           
-          # Create release notes for dantotsu-updater
           cd $GITHUB_WORKSPACE
           {
             cat commit_log.txt
@@ -274,7 +328,6 @@ jobs:
             echo "![Total Downloads](https://img.shields.io/github/downloads/itsmechinmoy/dantotsu-updater/total?style=for-the-badge&label=TOTAL%20DOWNLOADS&labelColor=black&color=white) ![Current Release](https://img.shields.io/github/downloads/itsmechinmoy/dantotsu-updater/${CURRENT_TAG_SAFE}/total?style=for-the-badge&label=CURRENT%20RELEASE&labelColor=black&color=white)"
           } > commit_log_updater.txt
   
-          # Create release notes for Dantotsu
           {
             cat commit_log.txt
             cat checksums.txt
@@ -305,7 +358,6 @@ jobs:
             exit 1
           fi
           
-          # Format commit messages for Telegram
           telegram_commit_messages=$(echo "$COMMIT_LOG" | while read -r line; do
             message=$(echo "$line" | sed -E 's/● (.*) ~(.*) \[֍\]\((.*)\)/● \1 ~\2 <a href="\3">֍<\/a>/')
             message=$(echo "$message" | sed -E 's/\[#([0-9]+)\]\((https:\/\/[^)]+)\)/<a href="\2">#\1<\/a>/g')
@@ -313,8 +365,7 @@ jobs:
           done)
           telegram_commit_messages="<blockquote>${telegram_commit_messages}</blockquote>"
           
-          # Upload APK to Telegram
-          response=$(curl -sS -f -X POST \
+          curl -sS -f -X POST \
             "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendDocument" \
             -F "chat_id=-1003463471716" \
             -F "document=@$APK_PATH" \
@@ -322,8 +373,7 @@ jobs:
           Commits:
           ${telegram_commit_messages}
           Version: ${VERSION}" \
-            -F "parse_mode=HTML")
-          echo "Telegram upload response: $response"
+            -F "parse_mode=HTML"
 
       - name: Save SHA for next run
         run: |
