@@ -18,9 +18,20 @@ jobs:
       VERSION: ${{ steps.version.outputs.VERSION }}
 
     steps:
+      - name: Setup Forgejo SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.FORGEJO_SSH_KEY }}" > ~/.ssh/forgejo_key
+          chmod 600 ~/.ssh/forgejo_key
+          ssh-keyscan -p 2222 gitssh.rebelonion.dev >> ~/.ssh/known_hosts
+          echo "Host gitssh.rebelonion.dev
+            HostName gitssh.rebelonion.dev
+            Port 2222
+            IdentityFile ~/.ssh/forgejo_key" >> ~/.ssh/config
+
       - name: Checkout Repository
         run: |
-          git clone --depth 1 --branch dev https://git.rebelonion.dev/rebelonion/Dantotsu.git .
+          git clone --depth 1 --branch dev ssh://git@gitssh.rebelonion.dev:2222/rebelonion/Dantotsu.git .
 
       - name: Download last SHA from latest release
         id: download-last-sha
@@ -72,9 +83,20 @@ jobs:
     if: needs.check-updates.outputs.SHOULD_RUN == 'true'
 
     steps:
+      - name: Setup Forgejo SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.FORGEJO_SSH_KEY }}" > ~/.ssh/forgejo_key
+          chmod 600 ~/.ssh/forgejo_key
+          ssh-keyscan -p 2222 gitssh.rebelonion.dev >> ~/.ssh/known_hosts
+          echo "Host gitssh.rebelonion.dev
+            HostName gitssh.rebelonion.dev
+            Port 2222
+            IdentityFile ~/.ssh/forgejo_key" >> ~/.ssh/config
+
       - name: Checkout Repository
         run: |
-          git clone --branch dev https://git.rebelonion.dev/rebelonion/Dantotsu.git .
+          git clone --branch dev ssh://git@gitssh.rebelonion.dev:2222/rebelonion/Dantotsu.git .
           git fetch origin dev
           git checkout dev
 
@@ -115,9 +137,20 @@ jobs:
     if: needs.check-updates.outputs.SHOULD_RUN == 'true'
 
     steps:
+      - name: Setup Forgejo SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.FORGEJO_SSH_KEY }}" > ~/.ssh/forgejo_key
+          chmod 600 ~/.ssh/forgejo_key
+          ssh-keyscan -p 2222 gitssh.rebelonion.dev >> ~/.ssh/known_hosts
+          echo "Host gitssh.rebelonion.dev
+            HostName gitssh.rebelonion.dev
+            Port 2222
+            IdentityFile ~/.ssh/forgejo_key" >> ~/.ssh/config
+
       - name: Checkout Repository
         run: |
-          git clone --branch dev https://git.rebelonion.dev/rebelonion/Dantotsu.git .
+          git clone --branch dev ssh://git@gitssh.rebelonion.dev:2222/rebelonion/Dantotsu.git .
 
       - name: Fetch full history for commit log
         run: |
