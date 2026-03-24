@@ -18,40 +18,23 @@ jobs:
       VERSION: ${{ steps.version.outputs.VERSION }}
 
     steps:
-      - name: Setup Forgejo SSH with Passphrase
+      - name: Setup Forgejo SSH
         run: |
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
-          
-          # Install sshpass for passphrase handling
           sudo apt-get update && sudo apt-get install -y sshpass
-          
-          # Write the SSH key
+          mkdir -p ~/.ssh
           echo "${{ secrets.FORGEJO_SSH_KEY }}" > ~/.ssh/forgejo_key
-          # Remove Windows line endings if present
-          sed -i 's/\r$//' ~/.ssh/forgejo_key
           chmod 600 ~/.ssh/forgejo_key
-          
-          # Add host key
-          ssh-keyscan -p 2222 gitssh.rebelonion.dev >> ~/.ssh/known_hosts 2>/dev/null
-          
-          # Start ssh-agent and add the key with passphrase
+          ssh-keyscan -p 2222 gitssh.rebelonion.dev >> ~/.ssh/known_hosts
           eval $(ssh-agent)
           sshpass -p "${{ secrets.FORGEJO_SSH_PASSPHRASE }}" ssh-add ~/.ssh/forgejo_key
-          
-          # Create SSH config
-          cat >> ~/.ssh/config << 'EOF'
-          Host forgejo
+          echo "Host gitssh.rebelonion.dev
             HostName gitssh.rebelonion.dev
             Port 2222
-            User git
-            IdentityFile ~/.ssh/forgejo_key
-            StrictHostKeyChecking accept-new
-          EOF
+            IdentityFile ~/.ssh/forgejo_key" >> ~/.ssh/config
 
       - name: Checkout Repository
         run: |
-          git clone --depth 1 --branch dev git@forgejo:rebelonion/Dantotsu.git .
+          git clone --depth 1 --branch dev ssh://git@gitssh.rebelonion.dev:2222/rebelonion/Dantotsu.git .
 
       - name: Download last SHA from latest release
         id: download-last-sha
@@ -103,29 +86,23 @@ jobs:
     if: needs.check-updates.outputs.SHOULD_RUN == 'true'
 
     steps:
-      - name: Setup Forgejo SSH with Passphrase
+      - name: Setup Forgejo SSH
         run: |
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
           sudo apt-get update && sudo apt-get install -y sshpass
-          echo "${{ secrets.FORGEJO_SSH_KEY }}" > ~/.ssh/forgejo_ke
-          sed -i 's/\r$//' ~/.ssh/forgejo_key
+          mkdir -p ~/.ssh
+          echo "${{ secrets.FORGEJO_SSH_KEY }}" > ~/.ssh/forgejo_key
           chmod 600 ~/.ssh/forgejo_key
-          ssh-keyscan -p 2222 gitssh.rebelonion.dev >> ~/.ssh/known_hosts 2>/dev/null
+          ssh-keyscan -p 2222 gitssh.rebelonion.dev >> ~/.ssh/known_hosts
           eval $(ssh-agent)
           sshpass -p "${{ secrets.FORGEJO_SSH_PASSPHRASE }}" ssh-add ~/.ssh/forgejo_key
-          cat >> ~/.ssh/config << 'EOF'
-          Host forgejo
+          echo "Host gitssh.rebelonion.dev
             HostName gitssh.rebelonion.dev
             Port 2222
-            User git
-            IdentityFile ~/.ssh/forgejo_key
-            StrictHostKeyChecking accept-new
-          EOF
+            IdentityFile ~/.ssh/forgejo_key" >> ~/.ssh/config
 
       - name: Checkout Repository
         run: |
-          git clone --branch dev git@forgejo:rebelonion/Dantotsu.git .
+          git clone --branch dev ssh://git@gitssh.rebelonion.dev:2222/rebelonion/Dantotsu.git .
           git fetch origin dev
           git checkout dev
 
@@ -166,29 +143,23 @@ jobs:
     if: needs.check-updates.outputs.SHOULD_RUN == 'true'
 
     steps:
-      - name: Setup Forgejo SSH with Passphrase
+      - name: Setup Forgejo SSH
         run: |
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
           sudo apt-get update && sudo apt-get install -y sshpass
+          mkdir -p ~/.ssh
           echo "${{ secrets.FORGEJO_SSH_KEY }}" > ~/.ssh/forgejo_key
-          sed -i 's/\r$//' ~/.ssh/forgejo_key
           chmod 600 ~/.ssh/forgejo_key
-          ssh-keyscan -p 2222 gitssh.rebelonion.dev >> ~/.ssh/known_hosts 2>/dev/nul
+          ssh-keyscan -p 2222 gitssh.rebelonion.dev >> ~/.ssh/known_hosts
           eval $(ssh-agent)
           sshpass -p "${{ secrets.FORGEJO_SSH_PASSPHRASE }}" ssh-add ~/.ssh/forgejo_key
-          cat >> ~/.ssh/config << 'EOF'
-          Host forgejo
+          echo "Host gitssh.rebelonion.dev
             HostName gitssh.rebelonion.dev
             Port 2222
-            User git
-            IdentityFile ~/.ssh/forgejo_key
-            StrictHostKeyChecking accept-new
-          EOF
+            IdentityFile ~/.ssh/forgejo_key" >> ~/.ssh/config
 
       - name: Checkout Repository
         run: |
-          git clone --branch dev git@forgejo:rebelonion/Dantotsu.git .
+          git clone --branch dev ssh://git@gitssh.rebelonion.dev:2222/rebelonion/Dantotsu.git .
 
       - name: Fetch full history for commit log
         run: |
