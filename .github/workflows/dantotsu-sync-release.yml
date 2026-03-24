@@ -27,7 +27,12 @@ jobs:
           chmod 600 ~/.ssh/forgejo_key
           ssh-keyscan -p 2222 gitssh.rebelonion.dev >> ~/.ssh/known_hosts
           eval $(ssh-agent)
-          sshpass -p "${{ secrets.FORGEJO_SSH_PASSPHRASE }}" ssh-add ~/.ssh/forgejo_key < /dev/null
+          echo '#!/bin/bash' > /tmp/askpass.sh
+          echo "echo '${{ secrets.FORGEJO_SSH_PASSPHRASE }}'" >> /tmp/askpass.sh
+          chmod +x /tmp/askpass.sh
+          export DISPLAY=:0
+          export SSH_ASKPASS=/tmp/askpass.sh
+          setsid ssh-add ~/.ssh/forgejo_key < /dev/null
           echo "Host gitssh.rebelonion.dev
             HostName gitssh.rebelonion.dev
             Port 2222
@@ -96,7 +101,12 @@ jobs:
           chmod 600 ~/.ssh/forgejo_key
           ssh-keyscan -p 2222 gitssh.rebelonion.dev >> ~/.ssh/known_hosts
           eval $(ssh-agent)
-          sshpass -p "${{ secrets.FORGEJO_SSH_PASSPHRASE }}" ssh-add ~/.ssh/forgejo_key < /dev/null
+          echo '#!/bin/bash' > /tmp/askpass.sh
+          echo "echo '${{ secrets.FORGEJO_SSH_PASSPHRASE }}'" >> /tmp/askpass.sh
+          chmod +x /tmp/askpass.sh
+          export DISPLAY=:0
+          export SSH_ASKPASS=/tmp/askpass.sh
+          setsid ssh-add ~/.ssh/forgejo_key < /dev/null
           echo "Host gitssh.rebelonion.dev
             HostName gitssh.rebelonion.dev
             Port 2222
@@ -154,7 +164,12 @@ jobs:
           chmod 600 ~/.ssh/forgejo_key
           ssh-keyscan -p 2222 gitssh.rebelonion.dev >> ~/.ssh/known_hosts
           eval $(ssh-agent)
-          sshpass -p "${{ secrets.FORGEJO_SSH_PASSPHRASE }}" ssh-add ~/.ssh/forgejo_key < /dev/null
+          echo '#!/bin/bash' > /tmp/askpass.sh
+          echo "echo '${{ secrets.FORGEJO_SSH_PASSPHRASE }}'" >> /tmp/askpass.sh
+          chmod +x /tmp/askpass.sh
+          export DISPLAY=:0
+          export SSH_ASKPASS=/tmp/askpass.sh
+          setsid ssh-add ~/.ssh/forgejo_key < /dev/null
           echo "Host gitssh.rebelonion.dev
             HostName gitssh.rebelonion.dev
             Port 2222
