@@ -35,7 +35,8 @@ jobs:
 
       - name: Checkout Repository
         run: |
-          git clone --depth 1 --branch dev ssh://git@gitssh.rebelonion.dev:2222/rebelonion/Dantotsu.git .
+          # Using the Host Alias from ssh/config to force usage of forgejo_key
+          git clone --depth 1 --branch dev gitssh.rebelonion.dev:rebelonion/Dantotsu.git .
 
       - name: Download last SHA from latest release
         id: download-last-sha
@@ -104,7 +105,7 @@ jobs:
 
       - name: Checkout Repository
         run: |
-          git clone --branch dev ssh://git@gitssh.rebelonion.dev:2222/rebelonion/Dantotsu.git .
+          git clone --branch dev gitssh.rebelonion.dev:rebelonion/Dantotsu.git .
           git fetch origin dev
           git checkout dev
 
@@ -161,7 +162,7 @@ jobs:
 
       - name: Checkout Repository
         run: |
-          git clone --branch dev ssh://git@gitssh.rebelonion.dev:2222/rebelonion/Dantotsu.git .
+          git clone --branch dev gitssh.rebelonion.dev:rebelonion/Dantotsu.git .
 
       - name: Fetch full history for commit log
         run: |
@@ -240,7 +241,7 @@ jobs:
             UNIVERSAL="app-google-release.apk"
           fi
           
-          # Generate checksums once (same for both repos)
+          # Generate checksums once
           {
             echo -e "\n---\n### Checksums\n"
             echo "| Variant | SHA-256 |"
@@ -326,10 +327,8 @@ jobs:
       - name: Delete existing tags and releases if exists
         run: |
           TAG="v${{ needs.check-updates.outputs.VERSION }}"
-          # Delete from dantotsu-updater
           gh release delete "$TAG" -y --repo itsmechinmoy/dantotsu-updater || true
           git push https://${{ secrets.GITHUB_TOKEN }}@github.com/itsmechinmoy/dantotsu-updater.git :refs/tags/$TAG || true
-          # Delete from Dantotsu
           gh release delete "$TAG" -y --repo itsmechinmoy/Dantotsu || true
           git push https://${{ secrets.DANTOTSU_SYNC }}@github.com/itsmechinmoy/Dantotsu.git :refs/tags/$TAG || true
         env:
