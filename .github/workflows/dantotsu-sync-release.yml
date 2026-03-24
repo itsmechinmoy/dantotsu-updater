@@ -36,7 +36,12 @@ jobs:
           echo "Host gitssh.rebelonion.dev
             HostName gitssh.rebelonion.dev
             Port 2222
-            IdentityFile ~/.ssh/forgejo_key" >> ~/.ssh/config
+            IdentityFile ~/.ssh/forgejo_key
+            IdentitiesOnly yes" >> ~/.ssh/config
+          # Test SSH connection
+          echo "Testing SSH connection..."
+          ssh -T -p 2222 git@gitssh.rebelonion.dev || true
+          echo "SSH test completed"
 
       - name: Checkout Repository
         run: |
@@ -110,7 +115,12 @@ jobs:
           echo "Host gitssh.rebelonion.dev
             HostName gitssh.rebelonion.dev
             Port 2222
-            IdentityFile ~/.ssh/forgejo_key" >> ~/.ssh/config
+            IdentityFile ~/.ssh/forgejo_key
+            IdentitiesOnly yes" >> ~/.ssh/config
+          # Test SSH connection
+          echo "Testing SSH connection..."
+          ssh -T -p 2222 git@gitssh.rebelonion.dev || true
+          echo "SSH test completed"
 
       - name: Checkout Repository
         run: |
@@ -173,7 +183,12 @@ jobs:
           echo "Host gitssh.rebelonion.dev
             HostName gitssh.rebelonion.dev
             Port 2222
-            IdentityFile ~/.ssh/forgejo_key" >> ~/.ssh/config
+            IdentityFile ~/.ssh/forgejo_key
+            IdentitiesOnly yes" >> ~/.ssh/config
+          # Test SSH connection
+          echo "Testing SSH connection..."
+          ssh -T -p 2222 git@gitssh.rebelonion.dev || true
+          echo "SSH test completed"
 
       - name: Checkout Repository
         run: |
