@@ -20,28 +20,18 @@ jobs:
     steps:
       - name: Setup Forgejo SSH
         run: |
-          sudo apt-get update && sudo apt-get install -y sshpass
           mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
           echo "${{ secrets.FORGEJO_SSH_KEY }}" > ~/.ssh/forgejo_key
           chmod 600 ~/.ssh/forgejo_key
           ssh-keyscan -p 2222 gitssh.rebelonion.dev >> ~/.ssh/known_hosts
-          eval $(ssh-agent)
-          echo '#!/bin/bash' > /tmp/askpass.sh
-          echo "echo '${{ secrets.FORGEJO_SSH_PASSPHRASE }}'" >> /tmp/askpass.sh
-          chmod +x /tmp/askpass.sh
-          export DISPLAY=:0
-          export SSH_ASKPASS=/tmp/askpass.sh
-          setsid ssh-add ~/.ssh/forgejo_key < /dev/null
-          echo "Host gitssh.rebelonion.dev
+          cat <<EOF > ~/.ssh/config
+          Host gitssh.rebelonion.dev
             HostName gitssh.rebelonion.dev
             Port 2222
+            User git
             IdentityFile ~/.ssh/forgejo_key
-            IdentitiesOnly yes" >> ~/.ssh/config
-          # Test SSH connection
-          echo "Testing SSH connection..."
-          ssh -T -p 2222 git@gitssh.rebelonion.dev || true
-          echo "SSH test completed"
+            IdentitiesOnly yes
+          EOF
 
       - name: Checkout Repository
         run: |
@@ -99,28 +89,18 @@ jobs:
     steps:
       - name: Setup Forgejo SSH
         run: |
-          sudo apt-get update && sudo apt-get install -y sshpass
           mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
           echo "${{ secrets.FORGEJO_SSH_KEY }}" > ~/.ssh/forgejo_key
           chmod 600 ~/.ssh/forgejo_key
           ssh-keyscan -p 2222 gitssh.rebelonion.dev >> ~/.ssh/known_hosts
-          eval $(ssh-agent)
-          echo '#!/bin/bash' > /tmp/askpass.sh
-          echo "echo '${{ secrets.FORGEJO_SSH_PASSPHRASE }}'" >> /tmp/askpass.sh
-          chmod +x /tmp/askpass.sh
-          export DISPLAY=:0
-          export SSH_ASKPASS=/tmp/askpass.sh
-          setsid ssh-add ~/.ssh/forgejo_key < /dev/null
-          echo "Host gitssh.rebelonion.dev
+          cat <<EOF > ~/.ssh/config
+          Host gitssh.rebelonion.dev
             HostName gitssh.rebelonion.dev
             Port 2222
+            User git
             IdentityFile ~/.ssh/forgejo_key
-            IdentitiesOnly yes" >> ~/.ssh/config
-          # Test SSH connection
-          echo "Testing SSH connection..."
-          ssh -T -p 2222 git@gitssh.rebelonion.dev || true
-          echo "SSH test completed"
+            IdentitiesOnly yes
+          EOF
 
       - name: Checkout Repository
         run: |
@@ -135,7 +115,6 @@ jobs:
 
       - name: Setup SSH
         run: |
-          mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan codeberg.org gitlab.com >> ~/.ssh/known_hosts
@@ -167,28 +146,18 @@ jobs:
     steps:
       - name: Setup Forgejo SSH
         run: |
-          sudo apt-get update && sudo apt-get install -y sshpass
           mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
           echo "${{ secrets.FORGEJO_SSH_KEY }}" > ~/.ssh/forgejo_key
           chmod 600 ~/.ssh/forgejo_key
           ssh-keyscan -p 2222 gitssh.rebelonion.dev >> ~/.ssh/known_hosts
-          eval $(ssh-agent)
-          echo '#!/bin/bash' > /tmp/askpass.sh
-          echo "echo '${{ secrets.FORGEJO_SSH_PASSPHRASE }}'" >> /tmp/askpass.sh
-          chmod +x /tmp/askpass.sh
-          export DISPLAY=:0
-          export SSH_ASKPASS=/tmp/askpass.sh
-          setsid ssh-add ~/.ssh/forgejo_key < /dev/null
-          echo "Host gitssh.rebelonion.dev
+          cat <<EOF > ~/.ssh/config
+          Host gitssh.rebelonion.dev
             HostName gitssh.rebelonion.dev
             Port 2222
+            User git
             IdentityFile ~/.ssh/forgejo_key
-            IdentitiesOnly yes" >> ~/.ssh/config
-          # Test SSH connection
-          echo "Testing SSH connection..."
-          ssh -T -p 2222 git@gitssh.rebelonion.dev || true
-          echo "SSH test completed"
+            IdentitiesOnly yes
+          EOF
 
       - name: Checkout Repository
         run: |
@@ -240,14 +209,14 @@ jobs:
         run: |
           if ! grep -q "splits {" app/build.gradle; then
             sed -i '/android {/a\
-            \    splits {\
-            \        abi {\
-            \            enable true\
-            \            reset()\
-            \            include "armeabi-v7a", "arm64-v8a", "x86", "x86_64"\
-            \            universalApk true\
-            \        }\
-            \    }' app/build.gradle
+                splits {\
+                    abi {\
+                        enable true\
+                        reset()\
+                        include "armeabi-v7a", "arm64-v8a", "x86", "x86_64"\
+                        universalApk true\
+                    }\
+                }' app/build.gradle
           fi
 
       - name: Decode Keystore
