@@ -63,7 +63,7 @@ jobs:
         id: download-last-sha
         run: |
           LATEST_RELEASE=$(curl -s https://api.github.com/repos/itsmechinmoy/dantotsu-updater/releases/latest)
-          SHA_URL=$(echo "$LATEST_RELEASE" | grep -o 'https://.*last_sha\.txt' | head -1)
+          SHA_URL=$(echo "$LATEST_RELEASE" | jq -r '.assets[] | select(.name == "last_sha.txt") | .browser_download_url')
           if [ -n "$SHA_URL" ]; then
             curl -sL "$SHA_URL" -o last_sha.txt
             echo "Downloaded last SHA from release"
