@@ -3,6 +3,10 @@ name: Build, Release and Sync Dantotsu
 permissions:
   contents: write
 
+concurrency:
+  group: build-release
+  cancel-in-progress: true
+
 on:
   schedule:
     - cron: "0 * * * *" # Run every hour
@@ -399,6 +403,7 @@ jobs:
             app/build/outputs/apk/google/release/*.apk
             last_sha.txt
           token: ${{ secrets.GITHUB_TOKEN }}
+          makeLatest: false
 
       - name: Create Release in Dantotsu
         uses: ncipollo/release-action@v1
@@ -410,6 +415,7 @@ jobs:
           token: ${{ secrets.DANTOTSU_SYNC }}
           repo: Dantotsu
           owner: itsmechinmoy
+          makeLatest: false
 
       - name: Upload Commit Log Artifact
         uses: actions/upload-artifact@v4
