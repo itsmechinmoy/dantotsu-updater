@@ -34,12 +34,10 @@ jobs:
           echo "$SSH_KEY" > ~/.ssh/forgejo_key
           chmod 600 ~/.ssh/forgejo_key
           
-          # Start agent and save env vars for the rest of the job
           eval $(ssh-agent -s)
           echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" >> $GITHUB_ENV
           echo "SSH_AGENT_PID=$SSH_AGENT_PID" >> $GITHUB_ENV
           
-          # Use expect to handle the passphrase prompt
           expect <<EOF
             spawn ssh-add /home/runner/.ssh/forgejo_key
             expect "Enter passphrase"
@@ -101,7 +99,7 @@ jobs:
         if: steps.compare.outputs.SHOULD_RUN == 'true'
         id: version
         run: |
-          VER=$(grep -E -o 'versionName "[^"]*"' app/build.gradle | cut -d'"' -f2)
+          VER=$(grep -E -o 'versionName = "[^"]*"' app/build.gradle.kts | cut -d'"' -f2)
           SHA=$(git rev-parse HEAD)
           VERSION="${VER}+${SHA:0:7}"
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
@@ -273,16 +271,16 @@ jobs:
 
       - name: Add Split APK Configuration
         run: |
-          if ! grep -q "splits {" app/build.gradle; then
-            sed -i '/android {/a\
+          if ! grep -q "splits {" app/build.gradle.kts; then
+            sed -i '/^android {/a\
                 splits {\
                     abi {\
-                        enable true\
+                        enable = true\
                         reset()\
-                        include "armeabi-v7a", "arm64-v8a", "x86", "x86_64"\
-                        universalApk true\
+                        include("armeabi-v7a", "arm64-v8a", "x86", "x86_64")\
+                        isUniversalApk = true\
                     }\
-                }' app/build.gradle
+                }' app/build.gradle.kts
           fi
 
       - name: Decode Keystore
