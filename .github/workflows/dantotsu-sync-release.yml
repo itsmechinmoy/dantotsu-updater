@@ -401,7 +401,7 @@ jobs:
             app/build/outputs/apk/google/release/*.apk
             last_sha.txt
           token: ${{ secrets.GITHUB_TOKEN }}
-          makeLatest: false
+          makeLatest: true
 
       - name: Create Release in Dantotsu
         uses: ncipollo/release-action@v1
@@ -413,7 +413,7 @@ jobs:
           token: ${{ secrets.DANTOTSU_SYNC }}
           repo: Dantotsu
           owner: itsmechinmoy
-          makeLatest: false
+          makeLatest: true
 
       - name: Upload Commit Log Artifact
         uses: actions/upload-artifact@v4
