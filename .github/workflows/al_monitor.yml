@@ -24,16 +24,9 @@ jobs:
           path: ./state
         continue-on-error: true
 
-      - name: Check AniList & Notify
-        env:
-          WEBHOOK_DAN: ${{ secrets.ANILIST_WEBHOOK_DAN }}
-          WEBHOOK_DART: ${{ secrets.ANILIST_WEBHOOK_DART }}
-          WEBHOOK_ANYMEX: ${{ secrets.ANILIST_WEBHOOK_ANYMEX }}
-          ROLE_DAN: ${{ secrets.ANILIST_ROLE_DAN }}
-          ROLE_DART: ${{ secrets.ANILIST_ROLE_DART }}
-          ROLE_ANYMEX: ${{ secrets.ANILIST_ROLE_ANYMEX }}
+      - name: Write monitor script
         run: |
-          python3 << 'EOF'
+          cat > monitor.py << 'PYEOF'
           import json, os, urllib.request, urllib.error, time
 
           STATE_FILE = "./state/anilist_status.json"
@@ -67,7 +60,11 @@ jobs:
           except urllib.error.HTTPError as e:
               current_status = "down"
               status_code = e.code
-              error_msg = f"HTTP {e.code}"
+              try:
+                  body = json.loads(e.read())
+                  error_msg = body["errors"][0].get("message", f"HTTP {e.code}")
+              except Exception:
+                  error_msg = f"HTTP {e.code}"
           except Exception as e:
               current_status = "down"
               error_msg = str(e)
@@ -75,28 +72,28 @@ jobs:
           print(f"Current: {current_status} | Code: {status_code} | Error: {error_msg}")
           print(f"Previous: {prev['status']}")
 
-          servers = [
-              {"webhook": os.environ["WEBHOOK_DAN"],    "role": os.environ["ROLE_DAN"]},
-              {"webhook": os.environ["WEBHOOK_DART"],   "role": os.environ["ROLE_DART"]},
-              {"webhook": os.environ["WEBHOOK_ANYMEX"], "role": os.environ["ROLE_ANYMEX"]},
-          ]
+          servers = []
+          for key in ["DAN", "DART", "ANYMEX"]:
+              webhook = os.environ.get(f"WEBHOOK_{key}", "")
+              role = os.environ.get(f"ROLE_{key}", "")
+              if webhook:
+                  servers.append({"webhook": webhook, "role": role})
 
           def send_webhook(webhook, payload):
               data = json.dumps(payload).encode()
-              req = urllib.request.Request(
+              r = urllib.request.Request(
                   webhook, data=data,
                   headers={"Content-Type": "application/json"},
                   method="POST"
               )
-              with urllib.request.urlopen(req) as r:
-                  print(f"Webhook sent: {r.status}")
+              with urllib.request.urlopen(r) as resp:
+                  print(f"Webhook sent: {resp.status}")
 
           ts = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(now))
 
           if current_status == "down" and prev["status"] != "down":
               for s in servers:
-                  send_webhook(s["webhook"], {
-                      "content": f"<@&{s['role']}>",
+                  payload = {
                       "embeds": [{
                           "title": "🔴 AniList is DOWN",
                           "description": (
@@ -107,7 +104,10 @@ jobs:
                           "footer": {"text": "AniList Monitor"},
                           "timestamp": ts
                       }]
-                  })
+                  }
+                  if s["role"]:
+                      payload["content"] = f"<@&{s['role']}>"
+                  send_webhook(s["webhook"], payload)
               new_state = {"status": "down", "down_since": now}
 
           elif current_status == "up" and prev["status"] == "down":
@@ -135,7 +135,17 @@ jobs:
           os.makedirs("./state", exist_ok=True)
           with open(STATE_FILE, "w") as f:
               json.dump(new_state, f)
-          EOF
+          PYEOF
+
+      - name: Check AniList & Notify
+        env:
+          WEBHOOK_DAN: ${{ secrets.ANILIST_WEBHOOK_DAN }}
+          WEBHOOK_DART: ${{ secrets.ANILIST_WEBHOOK_DART }}
+          WEBHOOK_ANYMEX: ${{ secrets.ANILIST_WEBHOOK_ANYMEX }}
+          ROLE_DAN: ${{ secrets.ANILIST_ROLE_DAN }}
+          ROLE_DART: ${{ secrets.ANILIST_ROLE_DART }}
+          ROLE_ANYMEX: ${{ secrets.ANILIST_ROLE_ANYMEX }}
+        run: python3 monitor.py
 
       - name: Upload State Artifact
         uses: actions/upload-artifact@v4
