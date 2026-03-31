@@ -61,7 +61,7 @@ jobs:
             -X POST "https://graphql.anilist.co/" \
             -H "Content-Type: application/json" \
             -H "Accept: application/json" \
-            -d '{"query":"{ Page(page:1,perPage:1) { media { id } } }"}')
+            -d '{"query":"{ Media(id:1) { id } }"}')
 
           STATUS_CODE="$RESPONSE"
 
