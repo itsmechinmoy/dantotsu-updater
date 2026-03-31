@@ -241,14 +241,14 @@ jobs:
           if [ -n "${{ needs.check-updates.outputs.LAST_SHA }}" ]; then
             LAST_SHA="${{ needs.check-updates.outputs.LAST_SHA }}"
             if git cat-file -e "$LAST_SHA^{commit}" 2>/dev/null; then
-              COMMIT_LOGS=$(git log $LAST_SHA..HEAD --pretty=format:"● %s ~%an [֍](${REPO_URL}/commit/%H)" --max-count=10)
+              COMMIT_LOGS=$(git log $LAST_SHA..HEAD --pretty=format:"[֍](${REPO_URL}/commit/%H) %s ~%an" --max-count=10)
             else
               echo "Warning: Last SHA not found in history, showing last 10 commits"
-              COMMIT_LOGS=$(git log HEAD --pretty=format:"● %s ~%an [֍](${REPO_URL}/commit/%H)" --max-count=10)
+              COMMIT_LOGS=$(git log HEAD --pretty=format:"[֍](${REPO_URL}/commit/%H) %s ~%an" --max-count=10)
             fi
           else
             LAST_SHA=$(git rev-list --max-parents=0 HEAD)
-            COMMIT_LOGS=$(git log $LAST_SHA..HEAD --pretty=format:"● %s ~%an [֍](${REPO_URL}/commit/%H)" --max-count=10)
+            COMMIT_LOGS=$(git log $LAST_SHA..HEAD --pretty=format:"[֍](${REPO_URL}/commit/%H) %s ~%an" --max-count=10)
           fi
           if [ -z "$COMMIT_LOGS" ]; then
             COMMIT_LOGS="● No new commits since last release"
@@ -260,7 +260,7 @@ jobs:
           echo "EOF" >> $GITHUB_OUTPUT
           # Save base commit log
           echo -e "Commits:\n" > commit_log.txt
-          echo "$COMMIT_LOGS" | sed 's/●/\n●/g' | sed '/^$/d' >> commit_log.txt
+          echo "$COMMIT_LOGS" | sed 's/\[֍\]/\n●/g' | sed '/^$/d' >> commit_log.txt
 
       - name: Setup JDK 17
         uses: actions/setup-java@v4
