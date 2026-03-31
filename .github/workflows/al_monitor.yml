@@ -1,0 +1,146 @@
+name: AniList Status Monitor
+
+permissions:
+  contents: read
+
+concurrency:
+  group: anilist-monitor
+  cancel-in-progress: true
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download previous state
+        uses: actions/download-artifact@v4
+        with:
+          name: anilist-monitor-state
+          path: ./state
+        continue-on-error: true
+
+      - name: Check AniList & Notify
+        env:
+          WEBHOOK_DAN: ${{ secrets.ANILIST_WEBHOOK_DAN }}
+          WEBHOOK_DART: ${{ secrets.ANILIST_WEBHOOK_DART }}
+          WEBHOOK_ANYMEX: ${{ secrets.ANILIST_WEBHOOK_ANYMEX }}
+          ROLE_DAN: ${{ secrets.ANILIST_ROLE_DAN }}
+          ROLE_DART: ${{ secrets.ANILIST_ROLE_DART }}
+          ROLE_ANYMEX: ${{ secrets.ANILIST_ROLE_ANYMEX }}
+        run: |
+          python3 << 'EOF'
+          import json, os, urllib.request, urllib.error, time
+
+          STATE_FILE = "./state/anilist_status.json"
+
+          try:
+              with open(STATE_FILE) as f:
+                  prev = json.load(f)
+          except Exception:
+              prev = {"status": "unknown", "down_since": None}
+
+          query = '{"query":"{ Page(page:1,perPage:1) { media { id } } }"}'
+          req = urllib.request.Request(
+              "https://graphql.anilist.co/",
+              data=query.encode(),
+              headers={"Content-Type": "application/json", "Accept": "application/json"},
+              method="POST"
+          )
+
+          now = int(time.time())
+          status_code = None
+          error_msg = None
+          current_status = "up"
+
+          try:
+              with urllib.request.urlopen(req, timeout=10) as resp:
+                  status_code = resp.status
+                  body = json.loads(resp.read())
+                  if "errors" in body and not body.get("data"):
+                      current_status = "down"
+                      error_msg = body["errors"][0].get("message", "GraphQL error")
+          except urllib.error.HTTPError as e:
+              current_status = "down"
+              status_code = e.code
+              error_msg = f"HTTP {e.code}"
+          except Exception as e:
+              current_status = "down"
+              error_msg = str(e)
+
+          print(f"Current: {current_status} | Code: {status_code} | Error: {error_msg}")
+          print(f"Previous: {prev['status']}")
+
+          servers = [
+              {"webhook": os.environ["WEBHOOK_DAN"],    "role": os.environ["ROLE_DAN"]},
+              {"webhook": os.environ["WEBHOOK_DART"],   "role": os.environ["ROLE_DART"]},
+              {"webhook": os.environ["WEBHOOK_ANYMEX"], "role": os.environ["ROLE_ANYMEX"]},
+          ]
+
+          def send_webhook(webhook, payload):
+              data = json.dumps(payload).encode()
+              req = urllib.request.Request(
+                  webhook, data=data,
+                  headers={"Content-Type": "application/json"},
+                  method="POST"
+              )
+              with urllib.request.urlopen(req) as r:
+                  print(f"Webhook sent: {r.status}")
+
+          ts = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(now))
+
+          if current_status == "down" and prev["status"] != "down":
+              for s in servers:
+                  send_webhook(s["webhook"], {
+                      "content": f"<@&{s['role']}>",
+                      "embeds": [{
+                          "title": "🔴 AniList is DOWN",
+                          "description": (
+                              f"**Error:** `{error_msg or 'Unknown'}`\n"
+                              f"**Status Code:** `{status_code or 'N/A'}`"
+                          ),
+                          "color": 0xFF4444,
+                          "footer": {"text": "AniList Monitor"},
+                          "timestamp": ts
+                      }]
+                  })
+              new_state = {"status": "down", "down_since": now}
+
+          elif current_status == "up" and prev["status"] == "down":
+              down_since = prev.get("down_since") or now
+              duration_sec = now - down_since
+              mins, secs = divmod(duration_sec, 60)
+              hrs, mins = divmod(mins, 60)
+              duration_str = f"{hrs}h {mins}m {secs}s" if hrs else f"{mins}m {secs}s"
+              for s in servers:
+                  send_webhook(s["webhook"], {
+                      "embeds": [{
+                          "title": "🟢 AniList is back UP",
+                          "description": f"**Downtime Duration:** `{duration_str}`",
+                          "color": 0x44FF88,
+                          "footer": {"text": "AniList Monitor"},
+                          "timestamp": ts
+                      }]
+                  })
+              new_state = {"status": "up", "down_since": None}
+
+          else:
+              print("No state change, skipping notification.")
+              new_state = prev
+
+          os.makedirs("./state", exist_ok=True)
+          with open(STATE_FILE, "w") as f:
+              json.dump(new_state, f)
+          EOF
+
+      - name: Upload State Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: anilist-monitor-state
+          path: ./state/anilist_status.json
+          retention-days: 1
+          overwrite: true
