@@ -74,20 +74,23 @@ jobs:
 
           servers = []
           for key in ["DAN", "DART", "ANYMEX"]:
-              webhook = os.environ.get(f"WEBHOOK_{key}", "")
-              role = os.environ.get(f"ROLE_{key}", "")
+              webhook = os.environ.get(f"WEBHOOK_{key}", "").strip()
+              role = os.environ.get(f"ROLE_{key}", "").strip()
               if webhook:
                   servers.append({"webhook": webhook, "role": role})
 
           def send_webhook(webhook, payload):
-              data = json.dumps(payload).encode()
-              r = urllib.request.Request(
-                  webhook, data=data,
-                  headers={"Content-Type": "application/json"},
-                  method="POST"
-              )
-              with urllib.request.urlopen(r) as resp:
-                  print(f"Webhook sent: {resp.status}")
+              try:
+                  data = json.dumps(payload).encode()
+                  r = urllib.request.Request(
+                      webhook, data=data,
+                      headers={"Content-Type": "application/json"},
+                      method="POST"
+                  )
+                  with urllib.request.urlopen(r) as resp:
+                      print(f"Webhook sent: {resp.status}")
+              except Exception as e:
+                  print(f"Webhook failed: {e}")
 
           ts = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(now))
 
