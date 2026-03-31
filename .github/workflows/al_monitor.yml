@@ -2,6 +2,7 @@ name: AniList Status Monitor
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: anilist-monitor
@@ -18,11 +19,36 @@ jobs:
 
     steps:
       - name: Download previous state
-        uses: actions/download-artifact@v4
-        with:
-          name: anilist-monitor-state
-          path: ./state
-        continue-on-error: true
+        run: |
+          mkdir -p ./state
+
+          # Find the most recent successful run that has our artifact
+          RUN_ID=$(curl -s \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/artifacts?name=anilist-monitor-state&per_page=5" \
+            | jq -r '[.artifacts[] | select(.expired == false)] | sort_by(.created_at) | last | .workflow_run.id // ""')
+
+          if [ -z "$RUN_ID" ] || [ "$RUN_ID" = "null" ]; then
+            echo "No previous artifact found, first run."
+          else
+            echo "Found artifact from run: $RUN_ID"
+            curl -s -L \
+              -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${{ github.repository }}/actions/runs/$RUN_ID/artifacts" \
+              | jq -r '.artifacts[] | select(.name == "anilist-monitor-state") | .archive_download_url' \
+              | head -1 \
+              | xargs -I{} curl -s -L \
+                  -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+                  -o ./state/anilist-monitor-state.zip {}
+            
+            if [ -f ./state/anilist-monitor-state.zip ]; then
+              unzip -o ./state/anilist-monitor-state.zip -d ./state/
+              rm ./state/anilist-monitor-state.zip
+              echo "State loaded: $(cat ./state/anilist_status.json)"
+            fi
+          fi
 
       - name: Check AniList
         id: check
@@ -50,13 +76,11 @@ jobs:
             fi
           fi
 
-          # Truncate error message
           ERROR_MSG=$(echo "$ERROR_MSG" | cut -c1-900)
 
           echo "STATUS=$STATUS" >> $GITHUB_OUTPUT
           echo "STATUS_CODE=$STATUS_CODE" >> $GITHUB_OUTPUT
           echo "ERROR_MSG=$ERROR_MSG" >> $GITHUB_OUTPUT
-
           echo "Current: $STATUS | Code: $STATUS_CODE | Error: $ERROR_MSG"
 
       - name: Load Previous State
@@ -129,7 +153,7 @@ jobs:
           DOWN_SINCE="${{ steps.prev.outputs.DOWN_SINCE }}"
           NOW=$(date +%s)
 
-          if [ -n "$DOWN_SINCE" ]; then
+          if [ -n "$DOWN_SINCE" ] && [ "$DOWN_SINCE" != "null" ]; then
             DURATION_SEC=$((NOW - DOWN_SINCE))
             HRS=$((DURATION_SEC / 3600))
             MINS=$(( (DURATION_SEC % 3600) / 60 ))
