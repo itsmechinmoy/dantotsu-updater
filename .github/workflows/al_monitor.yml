@@ -24,132 +24,57 @@ jobs:
           path: ./state
         continue-on-error: true
 
-      - name: Write monitor script
+      - name: Check AniList
+        id: check
         run: |
-          cat > monitor.py << 'PYEOF'
-          import json, os, urllib.request, urllib.error, time
+          STATUS="up"
+          STATUS_CODE=""
+          ERROR_MSG=""
 
-          STATE_FILE = "./state/anilist_status.json"
+          RESPONSE=$(curl -s -o /tmp/anilist_body.json -w "%{http_code}" \
+            -X POST "https://graphql.anilist.co/" \
+            -H "Content-Type: application/json" \
+            -H "Accept: application/json" \
+            -d '{"query":"{ Page(page:1,perPage:1) { media { id } } }"}')
 
-          try:
-              with open(STATE_FILE) as f:
-                  prev = json.load(f)
-          except Exception:
-              prev = {"status": "unknown", "down_since": None}
+          STATUS_CODE="$RESPONSE"
 
-          query = '{"query":"{ Page(page:1,perPage:1) { media { id } } }"}'
-          req = urllib.request.Request(
-              "https://graphql.anilist.co/",
-              data=query.encode(),
-              headers={"Content-Type": "application/json", "Accept": "application/json"},
-              method="POST"
-          )
+          if [ "$STATUS_CODE" != "200" ]; then
+            STATUS="down"
+            ERROR_MSG=$(jq -r '.errors[0].message // "HTTP '"$STATUS_CODE"'"' /tmp/anilist_body.json 2>/dev/null || echo "HTTP $STATUS_CODE")
+          else
+            HAS_ERROR=$(jq -r 'if .errors and (.data == null) then .errors[0].message else "" end' /tmp/anilist_body.json 2>/dev/null)
+            if [ -n "$HAS_ERROR" ]; then
+              STATUS="down"
+              ERROR_MSG="$HAS_ERROR"
+            fi
+          fi
 
-          now = int(time.time())
-          status_code = None
-          error_msg = None
-          current_status = "up"
+          # Truncate error message
+          ERROR_MSG=$(echo "$ERROR_MSG" | cut -c1-900)
 
-          try:
-              with urllib.request.urlopen(req, timeout=10) as resp:
-                  status_code = resp.status
-                  body = json.loads(resp.read())
-                  if "errors" in body and not body.get("data"):
-                      current_status = "down"
-                      error_msg = body["errors"][0].get("message", "GraphQL error")
-          except urllib.error.HTTPError as e:
-              current_status = "down"
-              status_code = e.code
-              try:
-                  body = json.loads(e.read())
-                  error_msg = body["errors"][0].get("message", f"HTTP {e.code}")
-              except Exception:
-                  error_msg = f"HTTP {e.code}"
-          except Exception as e:
-              current_status = "down"
-              error_msg = str(e)
+          echo "STATUS=$STATUS" >> $GITHUB_OUTPUT
+          echo "STATUS_CODE=$STATUS_CODE" >> $GITHUB_OUTPUT
+          echo "ERROR_MSG=$ERROR_MSG" >> $GITHUB_OUTPUT
 
-          # Truncate to stay within Discord's 1024 char field limit
-          if error_msg and len(error_msg) > 900:
-              error_msg = error_msg[:900] + "..."
+          echo "Current: $STATUS | Code: $STATUS_CODE | Error: $ERROR_MSG"
 
-          print(f"Current: {current_status} | Code: {status_code} | Error: {error_msg}")
-          print(f"Previous: {prev['status']}")
+      - name: Load Previous State
+        id: prev
+        run: |
+          if [ -f ./state/anilist_status.json ]; then
+            PREV_STATUS=$(jq -r '.status' ./state/anilist_status.json)
+            DOWN_SINCE=$(jq -r '.down_since // ""' ./state/anilist_status.json)
+          else
+            PREV_STATUS="unknown"
+            DOWN_SINCE=""
+          fi
+          echo "PREV_STATUS=$PREV_STATUS" >> $GITHUB_OUTPUT
+          echo "DOWN_SINCE=$DOWN_SINCE" >> $GITHUB_OUTPUT
+          echo "Previous: $PREV_STATUS"
 
-          servers = []
-          for key in ["DAN", "DART", "ANYMEX"]:
-              webhook = os.environ.get(f"WEBHOOK_{key}", "").strip()
-              role = os.environ.get(f"ROLE_{key}", "").strip()
-              if webhook:
-                  servers.append({"webhook": webhook, "role": role})
-
-          print(f"Active servers: {len(servers)}")
-
-          def send_webhook(webhook, payload):
-              try:
-                  data = json.dumps(payload).encode()
-                  print(f"Sending payload: {json.dumps(payload)}")
-                  r = urllib.request.Request(
-                      webhook, data=data,
-                      headers={"Content-Type": "application/json"},
-                      method="POST"
-                  )
-                  with urllib.request.urlopen(r) as resp:
-                      print(f"Webhook sent: {resp.status}")
-              except urllib.error.HTTPError as e:
-                  print(f"Webhook failed {e.code}: {e.read().decode()}")
-              except Exception as e:
-                  print(f"Webhook error: {e}")
-
-          ts = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(now))
-
-          if current_status == "down" and prev["status"] != "down":
-              for s in servers:
-                  payload = {
-                      "embeds": [{
-                          "title": "🔴 AniList is DOWN",
-                          "description": (
-                              f"**Error:** {error_msg or 'Unknown'}\n"
-                              f"**Status Code:** {status_code or 'N/A'}"
-                          ),
-                          "color": 0xFF4444,
-                          "footer": {"text": "AniList Monitor"},
-                          "timestamp": ts
-                      }]
-                  }
-                  if s["role"]:
-                      payload["content"] = f"<@&{s['role']}>"
-                  send_webhook(s["webhook"], payload)
-              new_state = {"status": "down", "down_since": now}
-
-          elif current_status == "up" and prev["status"] == "down":
-              down_since = prev.get("down_since") or now
-              duration_sec = now - down_since
-              mins, secs = divmod(duration_sec, 60)
-              hrs, mins = divmod(mins, 60)
-              duration_str = f"{hrs}h {mins}m {secs}s" if hrs else f"{mins}m {secs}s"
-              for s in servers:
-                  send_webhook(s["webhook"], {
-                      "embeds": [{
-                          "title": "🟢 AniList is back UP",
-                          "description": f"**Downtime Duration:** {duration_str}",
-                          "color": 0x44FF88,
-                          "footer": {"text": "AniList Monitor"},
-                          "timestamp": ts
-                      }]
-                  })
-              new_state = {"status": "up", "down_since": None}
-
-          else:
-              print("No state change, skipping notification.")
-              new_state = prev
-
-          os.makedirs("./state", exist_ok=True)
-          with open(STATE_FILE, "w") as f:
-              json.dump(new_state, f)
-          PYEOF
-
-      - name: Check AniList & Notify
+      - name: Notify Down
+        if: steps.check.outputs.STATUS == 'down' && steps.prev.outputs.PREV_STATUS != 'down'
         env:
           WEBHOOK_DAN: ${{ secrets.ANILIST_WEBHOOK_DAN }}
           WEBHOOK_DART: ${{ secrets.ANILIST_WEBHOOK_DART }}
@@ -157,7 +82,115 @@ jobs:
           ROLE_DAN: ${{ secrets.ANILIST_ROLE_DAN }}
           ROLE_DART: ${{ secrets.ANILIST_ROLE_DART }}
           ROLE_ANYMEX: ${{ secrets.ANILIST_ROLE_ANYMEX }}
-        run: python3 monitor.py
+        run: |
+          TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          ERROR_MSG="${{ steps.check.outputs.ERROR_MSG }}"
+          STATUS_CODE="${{ steps.check.outputs.STATUS_CODE }}"
+
+          send() {
+            local WEBHOOK="$1"
+            local ROLE="$2"
+            [ -z "$WEBHOOK" ] && return
+
+            PAYLOAD=$(jq -nc \
+              --arg role "$ROLE" \
+              --arg error "$ERROR_MSG" \
+              --arg code "$STATUS_CODE" \
+              --arg ts "$TS" \
+              '{
+                content: (if $role != "" then "<@&\($role)>" else null end),
+                embeds: [{
+                  title: "🔴 AniList is DOWN",
+                  description: "**Error:** \($error)\n**Status Code:** \($code)",
+                  color: 16729156,
+                  footer: { text: "AniList Monitor" },
+                  timestamp: $ts
+                }]
+              }')
+
+            curl -s -o /dev/null -w "Webhook: %{http_code}\n" \
+              -H "Content-Type: application/json" \
+              -X POST "$WEBHOOK" \
+              -d "$PAYLOAD"
+          }
+
+          send "$WEBHOOK_DAN" "$ROLE_DAN"
+          send "$WEBHOOK_DART" "$ROLE_DART"
+          send "$WEBHOOK_ANYMEX" "$ROLE_ANYMEX"
+
+      - name: Notify Up
+        if: steps.check.outputs.STATUS == 'up' && steps.prev.outputs.PREV_STATUS == 'down'
+        env:
+          WEBHOOK_DAN: ${{ secrets.ANILIST_WEBHOOK_DAN }}
+          WEBHOOK_DART: ${{ secrets.ANILIST_WEBHOOK_DART }}
+          WEBHOOK_ANYMEX: ${{ secrets.ANILIST_WEBHOOK_ANYMEX }}
+        run: |
+          TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          DOWN_SINCE="${{ steps.prev.outputs.DOWN_SINCE }}"
+          NOW=$(date +%s)
+
+          if [ -n "$DOWN_SINCE" ]; then
+            DURATION_SEC=$((NOW - DOWN_SINCE))
+            HRS=$((DURATION_SEC / 3600))
+            MINS=$(( (DURATION_SEC % 3600) / 60 ))
+            SECS=$((DURATION_SEC % 60))
+            if [ "$HRS" -gt 0 ]; then
+              DURATION_STR="${HRS}h ${MINS}m ${SECS}s"
+            else
+              DURATION_STR="${MINS}m ${SECS}s"
+            fi
+          else
+            DURATION_STR="Unknown"
+          fi
+
+          send() {
+            local WEBHOOK="$1"
+            [ -z "$WEBHOOK" ] && return
+
+            PAYLOAD=$(jq -nc \
+              --arg duration "$DURATION_STR" \
+              --arg ts "$TS" \
+              '{
+                embeds: [{
+                  title: "🟢 AniList is back UP",
+                  description: "**Downtime Duration:** \($duration)",
+                  color: 4521096,
+                  footer: { text: "AniList Monitor" },
+                  timestamp: $ts
+                }]
+              }')
+
+            curl -s -o /dev/null -w "Webhook: %{http_code}\n" \
+              -H "Content-Type: application/json" \
+              -X POST "$WEBHOOK" \
+              -d "$PAYLOAD"
+          }
+
+          send "$WEBHOOK_DAN"
+          send "$WEBHOOK_DART"
+          send "$WEBHOOK_ANYMEX"
+
+      - name: Save State
+        run: |
+          mkdir -p ./state
+          STATUS="${{ steps.check.outputs.STATUS }}"
+          PREV_STATUS="${{ steps.prev.outputs.PREV_STATUS }}"
+          DOWN_SINCE="${{ steps.prev.outputs.DOWN_SINCE }}"
+          NOW=$(date +%s)
+
+          if [ "$STATUS" = "down" ] && [ "$PREV_STATUS" != "down" ]; then
+            DOWN_SINCE=$NOW
+          elif [ "$STATUS" = "up" ]; then
+            DOWN_SINCE=""
+          fi
+
+          jq -nc \
+            --arg status "$STATUS" \
+            --arg down_since "$DOWN_SINCE" \
+            '{ status: $status, down_since: (if $down_since != "" then ($down_since | tonumber) else null end) }' \
+            > ./state/anilist_status.json
+
+          echo "Saved state: $(cat ./state/anilist_status.json)"
 
       - name: Upload State Artifact
         uses: actions/upload-artifact@v4
