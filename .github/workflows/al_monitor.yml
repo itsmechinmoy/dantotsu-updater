@@ -69,6 +69,10 @@ jobs:
               current_status = "down"
               error_msg = str(e)
 
+          # Truncate to stay within Discord's 1024 char field limit
+          if error_msg and len(error_msg) > 900:
+              error_msg = error_msg[:900] + "..."
+
           print(f"Current: {current_status} | Code: {status_code} | Error: {error_msg}")
           print(f"Previous: {prev['status']}")
 
@@ -79,9 +83,12 @@ jobs:
               if webhook:
                   servers.append({"webhook": webhook, "role": role})
 
+          print(f"Active servers: {len(servers)}")
+
           def send_webhook(webhook, payload):
               try:
                   data = json.dumps(payload).encode()
+                  print(f"Sending payload: {json.dumps(payload)}")
                   r = urllib.request.Request(
                       webhook, data=data,
                       headers={"Content-Type": "application/json"},
@@ -89,8 +96,10 @@ jobs:
                   )
                   with urllib.request.urlopen(r) as resp:
                       print(f"Webhook sent: {resp.status}")
+              except urllib.error.HTTPError as e:
+                  print(f"Webhook failed {e.code}: {e.read().decode()}")
               except Exception as e:
-                  print(f"Webhook failed: {e}")
+                  print(f"Webhook error: {e}")
 
           ts = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(now))
 
@@ -100,8 +109,8 @@ jobs:
                       "embeds": [{
                           "title": "🔴 AniList is DOWN",
                           "description": (
-                              f"**Error:** `{error_msg or 'Unknown'}`\n"
-                              f"**Status Code:** `{status_code or 'N/A'}`"
+                              f"**Error:** {error_msg or 'Unknown'}\n"
+                              f"**Status Code:** {status_code or 'N/A'}"
                           ),
                           "color": 0xFF4444,
                           "footer": {"text": "AniList Monitor"},
@@ -123,7 +132,7 @@ jobs:
                   send_webhook(s["webhook"], {
                       "embeds": [{
                           "title": "🟢 AniList is back UP",
-                          "description": f"**Downtime Duration:** `{duration_str}`",
+                          "description": f"**Downtime Duration:** {duration_str}",
                           "color": 0x44FF88,
                           "footer": {"text": "AniList Monitor"},
                           "timestamp": ts
