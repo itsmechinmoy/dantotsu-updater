@@ -361,7 +361,7 @@ jobs:
           fi
           
           telegram_commit_messages=$(echo "$COMMIT_LOG" | while read -r line; do
-            message=$(echo "$line" | sed -E 's/● (.*) ~(.*) \[֍\]\((.*)\)/● \1 ~\2 <a href="\3">֍<\/a>/')
+            message=$(echo "$line" | sed -E 's/\[֍\]\(([^)]+)\) (.*) ~(.*)/<a href="\1">֍<\/a> \2 ~\3/')
             message=$(echo "$message" | sed -E 's/\[#([0-9]+)\]\((https:\/\/[^)]+)\)/<a href="\2">#\1<\/a>/g')
             echo "$message"
           done)
