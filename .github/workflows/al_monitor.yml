@@ -64,11 +64,7 @@ jobs:
             -d '{"query":"{ Media(id:1) { id } }"}')
 
           STATUS_CODE="$RESPONSE"
-
-          # Extract the error message from the JSON response
           RAW_MSG=$(jq -r '.errors[0].message // ""' /tmp/anilist_body.json 2>/dev/null)
-
-          # Check if the extracted message contains "disabled" (case-insensitive)
           if echo "$RAW_MSG" | grep -iq "disabled"; then
             STATUS="down"
             ERROR_MSG="$RAW_MSG"
