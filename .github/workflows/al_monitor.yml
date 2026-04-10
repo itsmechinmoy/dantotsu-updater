@@ -69,7 +69,7 @@ jobs:
             STATUS="down"
             ERROR_MSG=$(jq -r '.errors[0].message // "HTTP '"$STATUS_CODE"'"' /tmp/anilist_body.json 2>/dev/null || echo "HTTP $STATUS_CODE")
           else
-            HAS_ERROR=$(jq -r 'if .errors and (.data == null) then .errors[0].message else "" end' /tmp/anilist_body.json 2>/dev/null)
+            HAS_ERROR=$(jq -r 'if ((.errors // [] | length) > 0) and (.data == null) and (.errors[0].status == 403) then .errors[0].message else "" end' /tmp/anilist_body.json 2>/dev/null)
             if [ -n "$HAS_ERROR" ]; then
               STATUS="down"
               ERROR_MSG="$HAS_ERROR"
