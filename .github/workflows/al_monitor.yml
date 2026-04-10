@@ -64,16 +64,10 @@ jobs:
             -d '{"query":"{ Media(id:1) { id } }"}')
 
           STATUS_CODE="$RESPONSE"
-
-          if [ "$STATUS_CODE" != "200" ]; then
+          RAW_MSG=$(jq -r '.errors[0].message // ""' /tmp/anilist_body.json 2>/dev/null)
+          if echo "$RAW_MSG" | grep -iq "disabled"; then
             STATUS="down"
-            ERROR_MSG=$(jq -r '.errors[0].message // "HTTP '"$STATUS_CODE"'"' /tmp/anilist_body.json 2>/dev/null || echo "HTTP $STATUS_CODE")
-          else
-            HAS_ERROR=$(jq -r 'if .errors and (.data == null) then .errors[0].message else "" end' /tmp/anilist_body.json 2>/dev/null)
-            if [ -n "$HAS_ERROR" ]; then
-              STATUS="down"
-              ERROR_MSG="$HAS_ERROR"
-            fi
+            ERROR_MSG="$RAW_MSG"
           fi
 
           ERROR_MSG=$(echo "$ERROR_MSG" | cut -c1-900)
