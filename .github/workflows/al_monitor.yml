@@ -122,8 +122,8 @@ jobs:
               '{
                 content: (if $role != "" then "<@&\($role)>" else null end),
                 embeds: [{
-                  title: "🔴 AniList API is DISABLED",
-                  description: "**Message:** \($error)\n**HTTP Status:** \($code)",
+                  title: "🔴 AniList is DOWN",
+                  description: "**Error:** \($error)\n**Status Code:** \($code)",
                   color: 16729156,
                   footer: { text: "AniList Monitor" },
                   timestamp: $ts
@@ -174,8 +174,8 @@ jobs:
               --arg ts "$TS" \
               '{
                 embeds: [{
-                  title: "🟢 AniList API is ENABLED",
-                  description: "**Disabled Duration:** \($duration)",
+                  title: "🟢 AniList is back UP",
+                  description: "**Downtime Duration:** \($duration)",
                   color: 4521096,
                   footer: { text: "AniList Monitor" },
                   timestamp: $ts
