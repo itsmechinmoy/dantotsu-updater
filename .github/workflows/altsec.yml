@@ -17,30 +17,57 @@ jobs:
 
       - name: Copy Secrets to Alt Repo
         env:
+          ALT_PAT_TOKEN: ${{ secrets.ALT_PAT_TOKEN }}
+          ANILIST_ROLE_ANYMEX: ${{ secrets.ANILIST_ROLE_ANYMEX }}
+          ANILIST_ROLE_DAN: ${{ secrets.ANILIST_ROLE_DAN }}
+          ANILIST_ROLE_DART: ${{ secrets.ANILIST_ROLE_DART }}
+          ANILIST_WEBHOOK_ANYMEX: ${{ secrets.ANILIST_WEBHOOK_ANYMEX }}
+          ANILIST_WEBHOOK_DAN: ${{ secrets.ANILIST_WEBHOOK_DAN }}
+          ANILIST_WEBHOOK_DART: ${{ secrets.ANILIST_WEBHOOK_DART }}
+          DANTOTSU_SYNC: ${{ secrets.DANTOTSU_SYNC }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          DISCORD_WEBHOOK_URL_DARTOTSU: ${{ secrets.DISCORD_WEBHOOK_URL_DARTOTSU }}
+          FORGEJO_PASSPHRASE: ${{ secrets.FORGEJO_PASSPHRASE }}
+          FORGEJO_SSH_KEY: ${{ secrets.FORGEJO_SSH_KEY }}
+          FORGEJO_SSH_PASSPHRASE: ${{ secrets.FORGEJO_SSH_PASSPHRASE }}
           KEYSTORE_FILE: ${{ secrets.KEYSTORE_FILE }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
           PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
-          ALT_PAT_TOKEN: ${{ secrets.ALT_PAT_TOKEN }}
-          FORGEJO_PASSPHRASE: ${{ secrets.FORGEJO_PASSPHRASE }}
-          FORGEJO_SSH_KEY: ${{ secrets.FORGEJO_SSH_KEY }}
-          FORGEJO_SSH_PASSPHRASE: ${{ secrets.FORGEJO_SSH_PASSPHRASE }}
+          SIMKL_CLIENT_ID: ${{ secrets.SIMKL_CLIENT_ID }}
+          SIMKL_CLIENT_SECRET: ${{ secrets.SIMKL_CLIENT_SECRET }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
         run: |
           echo "Copying secrets to justanotheraltffs/dantotsu-updater..."
-          gh secret set KEYSTORE_FILE           -b"$KEYSTORE_FILE"           --repo justanotheraltffs/dantotsu-updater
-          gh secret set KEYSTORE_PASSWORD       -b"$KEYSTORE_PASSWORD"       --repo justanotheraltffs/dantotsu-updater
-          gh secret set KEY_ALIAS               -b"$KEY_ALIAS"               --repo justanotheraltffs/dantotsu-updater
-          gh secret set KEY_PASSWORD            -b"$KEY_PASSWORD"            --repo justanotheraltffs/dantotsu-updater
-          gh secret set PAT_TOKEN               -b"$PAT_TOKEN"               --repo justanotheraltffs/dantotsu-updater
-          gh secret set FORGEJO_PASSPHRASE      -b"$FORGEJO_PASSPHRASE"      --repo justanotheraltffs/dantotsu-updater
-          gh secret set FORGEJO_SSH_KEY         -b"$FORGEJO_SSH_KEY"         --repo justanotheraltffs/dantotsu-updater
-          gh secret set FORGEJO_SSH_PASSPHRASE  -b"$FORGEJO_SSH_PASSPHRASE"  --repo justanotheraltffs/dantotsu-updater
-          echo "✅ Secrets copied successfully!"
+          gh secret set ALT_PAT_TOKEN                -b"$ALT_PAT_TOKEN"                --repo justanotheraltffs/dantotsu-updater
+          gh secret set ANILIST_ROLE_ANYMEX          -b"$ANILIST_ROLE_ANYMEX"          --repo justanotheraltffs/dantotsu-updater
+          gh secret set ANILIST_ROLE_DAN             -b"$ANILIST_ROLE_DAN"             --repo justanotheraltffs/dantotsu-updater
+          gh secret set ANILIST_ROLE_DART            -b"$ANILIST_ROLE_DART"            --repo justanotheraltffs/dantotsu-updater
+          gh secret set ANILIST_WEBHOOK_ANYMEX       -b"$ANILIST_WEBHOOK_ANYMEX"       --repo justanotheraltffs/dantotsu-updater
+          gh secret set ANILIST_WEBHOOK_DAN          -b"$ANILIST_WEBHOOK_DAN"          --repo justanotheraltffs/dantotsu-updater
+          gh secret set ANILIST_WEBHOOK_DART         -b"$ANILIST_WEBHOOK_DART"         --repo justanotheraltffs/dantotsu-updater
+          gh secret set DANTOTSU_SYNC                -b"$DANTOTSU_SYNC"                --repo justanotheraltffs/dantotsu-updater
+          gh secret set DISCORD_WEBHOOK_URL          -b"$DISCORD_WEBHOOK_URL"          --repo justanotheraltffs/dantotsu-updater
+          gh secret set DISCORD_WEBHOOK_URL_DARTOTSU -b"$DISCORD_WEBHOOK_URL_DARTOTSU" --repo justanotheraltffs/dantotsu-updater
+          gh secret set FORGEJO_PASSPHRASE           -b"$FORGEJO_PASSPHRASE"           --repo justanotheraltffs/dantotsu-updater
+          gh secret set FORGEJO_SSH_KEY              -b"$FORGEJO_SSH_KEY"              --repo justanotheraltffs/dantotsu-updater
+          gh secret set FORGEJO_SSH_PASSPHRASE       -b"$FORGEJO_SSH_PASSPHRASE"       --repo justanotheraltffs/dantotsu-updater
+          gh secret set KEYSTORE_FILE                -b"$KEYSTORE_FILE"                --repo justanotheraltffs/dantotsu-updater
+          gh secret set KEYSTORE_PASSWORD            -b"$KEYSTORE_PASSWORD"            --repo justanotheraltffs/dantotsu-updater
+          gh secret set KEY_ALIAS                    -b"$KEY_ALIAS"                    --repo justanotheraltffs/dantotsu-updater
+          gh secret set KEY_PASSWORD                 -b"$KEY_PASSWORD"                 --repo justanotheraltffs/dantotsu-updater
+          gh secret set PAT_TOKEN                    -b"$PAT_TOKEN"                    --repo justanotheraltffs/dantotsu-updater
+          gh secret set SIMKL_CLIENT_ID              -b"$SIMKL_CLIENT_ID"              --repo justanotheraltffs/dantotsu-updater
+          gh secret set SIMKL_CLIENT_SECRET          -b"$SIMKL_CLIENT_SECRET"          --repo justanotheraltffs/dantotsu-updater
+          gh secret set SSH_PRIVATE_KEY              -b"$SSH_PRIVATE_KEY"              --repo justanotheraltffs/dantotsu-updater
+          gh secret set TELEGRAM_BOT_TOKEN           -b"$TELEGRAM_BOT_TOKEN"           --repo justanotheraltffs/dantotsu-updater
+          echo "✅ All secrets copied successfully!"
 
       - name: Completion Message
         run: |
           echo "==================================="
           echo "✅ Done!"
-          echo "Secrets copied to: justanotheraltffs/dantotsu-updater"
+          echo "All secrets copied to: justanotheraltffs/dantotsu-updater"
           echo "==================================="
