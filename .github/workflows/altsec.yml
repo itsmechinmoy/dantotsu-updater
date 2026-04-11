@@ -1,0 +1,40 @@
+name: Copy Selected Secrets To dantotsu-updater (alt)
+on:
+  workflow_dispatch:
+
+jobs:
+  copy-secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install GH CLI
+        run: |
+          sudo apt update
+          sudo apt install gh -y
+
+      - name: Login GitHub CLI with Alt Account PAT
+        run: |
+          echo "${{ secrets.ALT_PAT_TOKEN }}" | gh auth login --with-token
+
+      - name: Copy Secrets to Alt Repo
+        env:
+          KEYSTORE_FILE: ${{ secrets.KEYSTORE_FILE }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
+          ALT_PAT_TOKEN: ${{ secrets.ALT_PAT_TOKEN }}
+        run: |
+          echo "Copying secrets to justanotheraltffs/dantotsu-updater..."
+          gh secret set KEYSTORE_FILE      -b"$KEYSTORE_FILE"      --repo justanotheraltffs/dantotsu-updater
+          gh secret set KEYSTORE_PASSWORD  -b"$KEYSTORE_PASSWORD"  --repo justanotheraltffs/dantotsu-updater
+          gh secret set KEY_ALIAS          -b"$KEY_ALIAS"          --repo justanotheraltffs/dantotsu-updater
+          gh secret set KEY_PASSWORD       -b"$KEY_PASSWORD"       --repo justanotheraltffs/dantotsu-updater
+          gh secret set PAT_TOKEN          -b"$PAT_TOKEN"          --repo justanotheraltffs/dantotsu-updater
+          echo "✅ Secrets copied successfully!"
+
+      - name: Completion Message
+        run: |
+          echo "==================================="
+          echo "✅ Done!"
+          echo "Secrets copied to: justanotheraltffs/dantotsu-updater"
+          echo "==================================="
