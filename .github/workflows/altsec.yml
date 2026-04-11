@@ -23,13 +23,19 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
           PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
           ALT_PAT_TOKEN: ${{ secrets.ALT_PAT_TOKEN }}
+          FORGEJO_PASSPHRASE: ${{ secrets.FORGEJO_PASSPHRASE }}
+          FORGEJO_SSH_KEY: ${{ secrets.FORGEJO_SSH_KEY }}
+          FORGEJO_SSH_PASSPHRASE: ${{ secrets.FORGEJO_SSH_PASSPHRASE }}
         run: |
           echo "Copying secrets to justanotheraltffs/dantotsu-updater..."
-          gh secret set KEYSTORE_FILE      -b"$KEYSTORE_FILE"      --repo justanotheraltffs/dantotsu-updater
-          gh secret set KEYSTORE_PASSWORD  -b"$KEYSTORE_PASSWORD"  --repo justanotheraltffs/dantotsu-updater
-          gh secret set KEY_ALIAS          -b"$KEY_ALIAS"          --repo justanotheraltffs/dantotsu-updater
-          gh secret set KEY_PASSWORD       -b"$KEY_PASSWORD"       --repo justanotheraltffs/dantotsu-updater
-          gh secret set PAT_TOKEN          -b"$PAT_TOKEN"          --repo justanotheraltffs/dantotsu-updater
+          gh secret set KEYSTORE_FILE           -b"$KEYSTORE_FILE"           --repo justanotheraltffs/dantotsu-updater
+          gh secret set KEYSTORE_PASSWORD       -b"$KEYSTORE_PASSWORD"       --repo justanotheraltffs/dantotsu-updater
+          gh secret set KEY_ALIAS               -b"$KEY_ALIAS"               --repo justanotheraltffs/dantotsu-updater
+          gh secret set KEY_PASSWORD            -b"$KEY_PASSWORD"            --repo justanotheraltffs/dantotsu-updater
+          gh secret set PAT_TOKEN               -b"$PAT_TOKEN"               --repo justanotheraltffs/dantotsu-updater
+          gh secret set FORGEJO_PASSPHRASE      -b"$FORGEJO_PASSPHRASE"      --repo justanotheraltffs/dantotsu-updater
+          gh secret set FORGEJO_SSH_KEY         -b"$FORGEJO_SSH_KEY"         --repo justanotheraltffs/dantotsu-updater
+          gh secret set FORGEJO_SSH_PASSPHRASE  -b"$FORGEJO_SSH_PASSPHRASE"  --repo justanotheraltffs/dantotsu-updater
           echo "✅ Secrets copied successfully!"
 
       - name: Completion Message
