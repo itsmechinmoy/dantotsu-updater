@@ -1,0 +1,43 @@
+name: Sync AniList to Kuroiru
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Login and get fresh cookies
+        id: login
+        run: |
+          RESPONSE=$(curl -s -D - -X POST https://kuroiru.co/backend/account \
+            -H "Content-Type: application/x-www-form-urlencoded" \
+            -H "Origin: https://kuroiru.co" \
+            -H "Referer: https://kuroiru.co/" \
+            --data "username=itsmechinmoy&login=${{ secrets.KUROIRU_PASSWORD }}")
+
+          EVSESS=$(echo "$RESPONSE" | grep -i 'set-cookie: evsess' | sed 's/.*evsess=\([^;]*\).*/\1/' | tr -d '\r')
+          TOKEN=$(echo "$RESPONSE" | grep -i 'set-cookie: token' | sed 's/.*token=\([^;]*\).*/\1/' | tr -d '\r')
+
+          echo "EVSESS=$EVSESS" >> $GITHUB_ENV
+          echo "TOKEN=$TOKEN" >> $GITHUB_ENV
+
+      - name: Sync Anime List
+        run: |
+          curl -s -X POST https://kuroiru.co/backend/account \
+            -H "Content-Type: application/x-www-form-urlencoded" \
+            -H "Origin: https://kuroiru.co" \
+            -H "Referer: https://kuroiru.co/" \
+            -b "evsess=$EVSESS; token=$TOKEN" \
+            --data "importanilist=itsmechinmoy"
+
+      - name: Sync Manga List
+        run: |
+          curl -s -X POST https://kuroiru.co/backend/account \
+            -H "Content-Type: application/x-www-form-urlencoded" \
+            -H "Origin: https://kuroiru.co" \
+            -H "Referer: https://kuroiru.co/" \
+            -b "evsess=$EVSESS; token=$TOKEN" \
+            --data "importanilistmanga=itsmechinmoy"
