@@ -21,6 +21,9 @@ jobs:
           EVSESS=$(echo "$RESPONSE" | grep -i 'set-cookie: evsess' | sed 's/.*evsess=\([^;]*\).*/\1/' | tr -d '\r')
           TOKEN=$(echo "$RESPONSE" | grep -i 'set-cookie: token' | sed 's/.*token=\([^;]*\).*/\1/' | tr -d '\r')
 
+          echo "::add-mask::$EVSESS"
+          echo "::add-mask::$TOKEN"
+
           echo "EVSESS=$EVSESS" >> $GITHUB_ENV
           echo "TOKEN=$TOKEN" >> $GITHUB_ENV
 
