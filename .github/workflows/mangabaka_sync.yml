@@ -1,64 +1,86 @@
 name: Sync AniList to MangaBaka
 on:
   schedule:
-    - cron: '0 */6 * * *'
+    - cron: '0 */4 * * *'
   workflow_dispatch:
     inputs:
-      setup_mode:
-        description: 'Generate PKCE auth URL (step 1)'
-        required: false
-        default: 'false'
+      mode:
+        description: 'Mode'
+        required: true
+        default: 'sync'
         type: choice
         options:
-          - 'false'
-          - 'true'
+          - sync
+          - generate_url
+          - exchange_code
       auth_code:
-        description: 'Auth code from browser redirect + code_verifier, format: CODE|VERIFIER (step 2)'
+        description: 'Auth code from browser (only for exchange_code mode)'
         required: false
         default: ''
 
 env:
   MB_CLIENT_ID: vmVxEyBLyCyugmgCAHBuKiHeIxsCcasM
   TOKEN_FILE: /tmp/mb_tokens.json
+  VERIFIER_FILE: /tmp/mb_verifier.txt
 
 jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
-      - name: Restore cached tokens
-        id: cache_restore
+      - name: Restore token cache
         uses: actions/cache/restore@v4
         with:
           path: /tmp/mb_tokens.json
           key: mb-tokens
           restore-keys: mb-tokens
 
-      - name: Setup mode — generate PKCE auth URL
-        if: inputs.setup_mode == 'true'
+      - name: Restore verifier cache
+        if: inputs.mode == 'exchange_code'
+        uses: actions/cache/restore@v4
+        with:
+          path: /tmp/mb_verifier.txt
+          key: mb-verifier
+          restore-keys: mb-verifier
+
+      # ── MODE: generate_url ──────────────────────────────────────────────
+      - name: Generate PKCE auth URL
+        if: inputs.mode == 'generate_url'
         run: |
           CODE_VERIFIER=$(openssl rand -base64 96 | tr -d '\n' | tr '+/' '-_' | tr -d '=')
           CODE_CHALLENGE=$(echo -n "$CODE_VERIFIER" | openssl dgst -sha256 -binary | openssl base64 | tr '+/' '-_' | tr -d '=\n')
 
+          echo "$CODE_VERIFIER" > $VERIFIER_FILE
+
           echo "=========================================="
-          echo "Open this URL in your browser and log in:"
+          echo "Open this URL in your browser:"
           echo ""
           echo "https://mangabaka.org/auth/oauth2/authorize?client_id=${MB_CLIENT_ID}&response_type=code&redirect_uri=http://127.0.0.1:9145&code_challenge=${CODE_CHALLENGE}&code_challenge_method=S256&scope=openid%20profile%20library.read%20library.write%20offline_access"
           echo ""
-          echo "After redirect, grab the 'code' from the URL, then re-run"
-          echo "this workflow with setup_mode=false and auth_code set to:"
-          echo ""
-          echo "  <code>|${CODE_VERIFIER}"
-          echo ""
+          echo "After login your browser will fail to load 127.0.0.1:9145"
+          echo "Copy ONLY the 'code' value from the address bar, then run"
+          echo "this workflow again with mode=exchange_code and paste it into auth_code."
           echo "=========================================="
 
-      - name: Exchange auth code for tokens
-        if: inputs.setup_mode != 'true' && inputs.auth_code != ''
-        run: |
-          AUTH_CODE=$(echo "${{ inputs.auth_code }}" | cut -d'|' -f1)
-          CODE_VERIFIER=$(echo "${{ inputs.auth_code }}" | cut -d'|' -f2)
+      - name: Save verifier cache
+        if: inputs.mode == 'generate_url'
+        uses: actions/cache/save@v4
+        with:
+          path: /tmp/mb_verifier.txt
+          key: mb-verifier-${{ github.run_id }}
 
-          echo "::add-mask::$AUTH_CODE"
+      # ── MODE: exchange_code ─────────────────────────────────────────────
+      - name: Exchange auth code for tokens
+        if: inputs.mode == 'exchange_code'
+        run: |
+          if [ ! -f "$VERIFIER_FILE" ]; then
+            echo "ERROR: No cached verifier. Run generate_url mode first."
+            exit 1
+          fi
+
+          CODE_VERIFIER=$(cat $VERIFIER_FILE)
+          AUTH_CODE="${{ inputs.auth_code }}"
           echo "::add-mask::$CODE_VERIFIER"
+          echo "::add-mask::$AUTH_CODE"
 
           RESPONSE=$(curl -s -X POST https://mangabaka.org/auth/oauth2/token \
             -H "Content-Type: application/x-www-form-urlencoded" \
@@ -72,27 +94,32 @@ jobs:
           REFRESH=$(echo "$RESPONSE" | jq -r '.refresh_token // empty')
 
           if [ -z "$ACCESS" ] || [ -z "$REFRESH" ]; then
-            echo "ERROR: Token exchange failed. Response:"
-            echo "$RESPONSE" | jq 'del(.access_token, .refresh_token)'
+            echo "ERROR: Token exchange failed:"
+            echo "$RESPONSE"
             exit 1
           fi
 
           echo "::add-mask::$ACCESS"
           echo "::add-mask::$REFRESH"
 
-          jq -n \
-            --arg access  "$ACCESS" \
-            --arg refresh "$REFRESH" \
-            '{access_token: $access, refresh_token: $refresh}' \
-            > $TOKEN_FILE
+          jq -n --arg a "$ACCESS" --arg r "$REFRESH" \
+            '{access_token: $a, refresh_token: $r}' > $TOKEN_FILE
 
-          echo "Token exchange successful."
+          echo "SUCCESS: Tokens cached. You can now run mode=sync."
 
+      - name: Save token cache after exchange
+        if: inputs.mode == 'exchange_code'
+        uses: actions/cache/save@v4
+        with:
+          path: /tmp/mb_tokens.json
+          key: mb-tokens-${{ github.run_id }}
+
+      # ── MODE: sync ──────────────────────────────────────────────────────
       - name: Refresh access token
-        if: inputs.setup_mode != 'true' && inputs.auth_code == ''
+        if: inputs.mode == 'sync' || inputs.mode == ''
         run: |
           if [ ! -f "$TOKEN_FILE" ]; then
-            echo "ERROR: No cached tokens found. Run setup_mode=true first, then paste the auth_code."
+            echo "ERROR: No cached tokens. Run generate_url then exchange_code first."
             exit 1
           fi
 
@@ -109,39 +136,23 @@ jobs:
           NEW_REFRESH=$(echo "$RESPONSE" | jq -r '.refresh_token // empty')
 
           if [ -z "$ACCESS" ]; then
-            echo "ERROR: Token refresh failed. Response:"
-            echo "$RESPONSE" | jq 'del(.access_token, .refresh_token)'
-            echo "Cached refresh token may have expired. Re-run setup_mode=true."
+            echo "ERROR: Token refresh failed:"
+            echo "$RESPONSE"
+            echo "Re-run generate_url then exchange_code to re-authenticate."
             exit 1
           fi
 
           echo "::add-mask::$ACCESS"
+          SAVE_REFRESH="${NEW_REFRESH:-$REFRESH}"
+          echo "::add-mask::$SAVE_REFRESH"
 
-          # Use rotated refresh token if server returned one, otherwise keep existing
-          if [ -n "$NEW_REFRESH" ]; then
-            echo "::add-mask::$NEW_REFRESH"
-            SAVE_REFRESH="$NEW_REFRESH"
-          else
-            SAVE_REFRESH="$REFRESH"
-          fi
+          jq -n --arg a "$ACCESS" --arg r "$SAVE_REFRESH" \
+            '{access_token: $a, refresh_token: $r}' > $TOKEN_FILE
 
-          jq -n \
-            --arg access  "$ACCESS" \
-            --arg refresh "$SAVE_REFRESH" \
-            '{access_token: $access, refresh_token: $refresh}' \
-            > $TOKEN_FILE
-
-          echo "Token refreshed successfully."
-
-      - name: Write access token to env
-        if: inputs.setup_mode != 'true'
-        run: |
-          MB_TOKEN=$(jq -r '.access_token' "$TOKEN_FILE")
-          echo "::add-mask::$MB_TOKEN"
-          echo "MB_TOKEN=$MB_TOKEN" >> $GITHUB_ENV
+          echo "MB_TOKEN=$ACCESS" >> $GITHUB_ENV
 
       - name: Fetch AniList manga list
-        if: inputs.setup_mode != 'true'
+        if: inputs.mode == 'sync' || inputs.mode == ''
         run: |
           QUERY='query($userName:String,$type:MediaType){MediaListCollection(userName:$userName,type:$type){lists{entries{status score(format:POINT_100) progress progressVolumes repeat notes startedAt{year month day}completedAt{year month day}media{id idMal}}}}}'
           curl -s -X POST https://graphql.anilist.co \
@@ -154,7 +165,7 @@ jobs:
           echo "Fetched $COUNT AniList manga entries"
 
       - name: Sync each entry to MangaBaka
-        if: inputs.setup_mode != 'true'
+        if: inputs.mode == 'sync' || inputs.mode == ''
         run: |
           map_status() {
             case "$1" in
@@ -192,7 +203,6 @@ jobs:
 
             MB_STATUS=$(map_status "$AL_STATUS")
 
-            # Resolve MangaBaka ID — prefer anilist source, fall back to MAL
             MB_ID=""
             if [ -n "$ANI_ID" ] && [ "$ANI_ID" != "null" ]; then
               MB_ID=$(curl -s "https://api.mangabaka.dev/v1/source/anilist/${ANI_ID}" \
@@ -245,8 +255,8 @@ jobs:
             sleep 2
           done
 
-      - name: Save updated tokens to cache
-        if: inputs.setup_mode != 'true'
+      - name: Save updated token cache
+        if: inputs.mode == 'sync' || inputs.mode == ''
         uses: actions/cache/save@v4
         with:
           path: /tmp/mb_tokens.json
