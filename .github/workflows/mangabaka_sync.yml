@@ -1,0 +1,253 @@
+name: Sync AniList to MangaBaka
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+    inputs:
+      setup_mode:
+        description: 'Generate PKCE auth URL (step 1)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+      auth_code:
+        description: 'Auth code from browser redirect + code_verifier, format: CODE|VERIFIER (step 2)'
+        required: false
+        default: ''
+
+env:
+  MB_CLIENT_ID: vmVxEyBLyCyugmgCAHBuKiHeIxsCcasM
+  TOKEN_FILE: /tmp/mb_tokens.json
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Restore cached tokens
+        id: cache_restore
+        uses: actions/cache/restore@v4
+        with:
+          path: /tmp/mb_tokens.json
+          key: mb-tokens
+          restore-keys: mb-tokens
+
+      - name: Setup mode — generate PKCE auth URL
+        if: inputs.setup_mode == 'true'
+        run: |
+          CODE_VERIFIER=$(openssl rand -base64 96 | tr -d '\n' | tr '+/' '-_' | tr -d '=')
+          CODE_CHALLENGE=$(echo -n "$CODE_VERIFIER" | openssl dgst -sha256 -binary | openssl base64 | tr '+/' '-_' | tr -d '=\n')
+
+          echo "=========================================="
+          echo "Open this URL in your browser and log in:"
+          echo ""
+          echo "https://mangabaka.org/auth/oauth2/authorize?client_id=${MB_CLIENT_ID}&response_type=code&redirect_uri=http://127.0.0.1:9145&code_challenge=${CODE_CHALLENGE}&code_challenge_method=S256&scope=openid%20profile%20library.read%20library.write%20offline_access"
+          echo ""
+          echo "After redirect, grab the 'code' from the URL, then re-run"
+          echo "this workflow with setup_mode=false and auth_code set to:"
+          echo ""
+          echo "  <code>|${CODE_VERIFIER}"
+          echo ""
+          echo "=========================================="
+
+      - name: Exchange auth code for tokens
+        if: inputs.setup_mode != 'true' && inputs.auth_code != ''
+        run: |
+          AUTH_CODE=$(echo "${{ inputs.auth_code }}" | cut -d'|' -f1)
+          CODE_VERIFIER=$(echo "${{ inputs.auth_code }}" | cut -d'|' -f2)
+
+          echo "::add-mask::$AUTH_CODE"
+          echo "::add-mask::$CODE_VERIFIER"
+
+          RESPONSE=$(curl -s -X POST https://mangabaka.org/auth/oauth2/token \
+            -H "Content-Type: application/x-www-form-urlencoded" \
+            --data-urlencode "grant_type=authorization_code" \
+            --data-urlencode "client_id=${MB_CLIENT_ID}" \
+            --data-urlencode "code=${AUTH_CODE}" \
+            --data-urlencode "redirect_uri=http://127.0.0.1:9145" \
+            --data-urlencode "code_verifier=${CODE_VERIFIER}")
+
+          ACCESS=$(echo "$RESPONSE"  | jq -r '.access_token  // empty')
+          REFRESH=$(echo "$RESPONSE" | jq -r '.refresh_token // empty')
+
+          if [ -z "$ACCESS" ] || [ -z "$REFRESH" ]; then
+            echo "ERROR: Token exchange failed. Response:"
+            echo "$RESPONSE" | jq 'del(.access_token, .refresh_token)'
+            exit 1
+          fi
+
+          echo "::add-mask::$ACCESS"
+          echo "::add-mask::$REFRESH"
+
+          jq -n \
+            --arg access  "$ACCESS" \
+            --arg refresh "$REFRESH" \
+            '{access_token: $access, refresh_token: $refresh}' \
+            > $TOKEN_FILE
+
+          echo "Token exchange successful."
+
+      - name: Refresh access token
+        if: inputs.setup_mode != 'true' && inputs.auth_code == ''
+        run: |
+          if [ ! -f "$TOKEN_FILE" ]; then
+            echo "ERROR: No cached tokens found. Run setup_mode=true first, then paste the auth_code."
+            exit 1
+          fi
+
+          REFRESH=$(jq -r '.refresh_token' "$TOKEN_FILE")
+          echo "::add-mask::$REFRESH"
+
+          RESPONSE=$(curl -s -X POST https://mangabaka.org/auth/oauth2/token \
+            -H "Content-Type: application/x-www-form-urlencoded" \
+            --data-urlencode "grant_type=refresh_token" \
+            --data-urlencode "client_id=${MB_CLIENT_ID}" \
+            --data-urlencode "refresh_token=${REFRESH}")
+
+          ACCESS=$(echo "$RESPONSE"      | jq -r '.access_token  // empty')
+          NEW_REFRESH=$(echo "$RESPONSE" | jq -r '.refresh_token // empty')
+
+          if [ -z "$ACCESS" ]; then
+            echo "ERROR: Token refresh failed. Response:"
+            echo "$RESPONSE" | jq 'del(.access_token, .refresh_token)'
+            echo "Cached refresh token may have expired. Re-run setup_mode=true."
+            exit 1
+          fi
+
+          echo "::add-mask::$ACCESS"
+
+          # Use rotated refresh token if server returned one, otherwise keep existing
+          if [ -n "$NEW_REFRESH" ]; then
+            echo "::add-mask::$NEW_REFRESH"
+            SAVE_REFRESH="$NEW_REFRESH"
+          else
+            SAVE_REFRESH="$REFRESH"
+          fi
+
+          jq -n \
+            --arg access  "$ACCESS" \
+            --arg refresh "$SAVE_REFRESH" \
+            '{access_token: $access, refresh_token: $refresh}' \
+            > $TOKEN_FILE
+
+          echo "Token refreshed successfully."
+
+      - name: Write access token to env
+        if: inputs.setup_mode != 'true'
+        run: |
+          MB_TOKEN=$(jq -r '.access_token' "$TOKEN_FILE")
+          echo "::add-mask::$MB_TOKEN"
+          echo "MB_TOKEN=$MB_TOKEN" >> $GITHUB_ENV
+
+      - name: Fetch AniList manga list
+        if: inputs.setup_mode != 'true'
+        run: |
+          QUERY='query($userName:String,$type:MediaType){MediaListCollection(userName:$userName,type:$type){lists{entries{status score(format:POINT_100) progress progressVolumes repeat notes startedAt{year month day}completedAt{year month day}media{id idMal}}}}}'
+          curl -s -X POST https://graphql.anilist.co \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${{ secrets.ANILIST_TOKEN }}" \
+            -d "{\"query\":$(echo "$QUERY" | jq -Rs .),\"variables\":{\"userName\":\"itsmechinmoy\",\"type\":\"MANGA\"}}" \
+            > /tmp/al_manga.json
+
+          COUNT=$(jq '[.data.MediaListCollection.lists[].entries[]] | length' /tmp/al_manga.json)
+          echo "Fetched $COUNT AniList manga entries"
+
+      - name: Sync each entry to MangaBaka
+        if: inputs.setup_mode != 'true'
+        run: |
+          map_status() {
+            case "$1" in
+              CURRENT|REPEATING) echo "reading" ;;
+              COMPLETED)         echo "completed" ;;
+              PAUSED)            echo "paused" ;;
+              DROPPED)           echo "dropped" ;;
+              *)                 echo "plan_to_read" ;;
+            esac
+          }
+
+          pad2() { printf '%02d' "$1"; }
+
+          jq -c '[.data.MediaListCollection.lists[].entries[]] | .[]' /tmp/al_manga.json | \
+          while IFS= read -r entry; do
+            ANI_ID=$(echo "$entry"    | jq -r '.media.id')
+            MAL_ID=$(echo "$entry"    | jq -r '.media.idMal // empty')
+            AL_STATUS=$(echo "$entry" | jq -r '.status')
+            SCORE=$(echo "$entry"     | jq -r '.score')
+            PROGRESS=$(echo "$entry"  | jq -r '.progress')
+            VOLUMES=$(echo "$entry"   | jq -r '.progressVolumes // 0')
+            NOTES=$(echo "$entry"     | jq -r '.notes // ""')
+
+            SY=$(echo "$entry" | jq -r '.startedAt.year   // empty')
+            SM=$(echo "$entry" | jq -r '.startedAt.month  // 1')
+            SD=$(echo "$entry" | jq -r '.startedAt.day    // 1')
+            CY=$(echo "$entry" | jq -r '.completedAt.year  // empty')
+            CM=$(echo "$entry" | jq -r '.completedAt.month // 1')
+            CD=$(echo "$entry" | jq -r '.completedAt.day   // 1')
+
+            STARTED=""
+            [ -n "$SY" ] && STARTED="${SY}-$(pad2 $SM)-$(pad2 $SD)"
+            FINISHED=""
+            [ -n "$CY" ] && FINISHED="${CY}-$(pad2 $CM)-$(pad2 $CD)"
+
+            MB_STATUS=$(map_status "$AL_STATUS")
+
+            # Resolve MangaBaka ID — prefer anilist source, fall back to MAL
+            MB_ID=""
+            if [ -n "$ANI_ID" ] && [ "$ANI_ID" != "null" ]; then
+              MB_ID=$(curl -s "https://api.mangabaka.dev/v1/source/anilist/${ANI_ID}" \
+                -H "Authorization: Bearer $MB_TOKEN" \
+                -H "Accept: application/json" | \
+                jq -r '(.data.series // []) | (map(select(.state=="active"))[0].id // .[0].id // empty)')
+            fi
+            if [ -z "$MB_ID" ] && [ -n "$MAL_ID" ]; then
+              MB_ID=$(curl -s "https://api.mangabaka.dev/v1/source/my-anime-list/${MAL_ID}" \
+                -H "Authorization: Bearer $MB_TOKEN" \
+                -H "Accept: application/json" | \
+                jq -r '(.data.series // []) | (map(select(.state=="active"))[0].id // .[0].id // empty)')
+            fi
+
+            if [ -z "$MB_ID" ] || [ "$MB_ID" = "null" ]; then
+              echo "SKIP  ani=$ANI_ID mal=$MAL_ID — not found on MangaBaka"
+              sleep 2
+              continue
+            fi
+
+            PAYLOAD=$(jq -n \
+              --arg   state    "$MB_STATUS" \
+              --argjson prog   "$PROGRESS" \
+              --argjson vol    "$VOLUMES" \
+              --argjson score  "$SCORE" \
+              --arg   notes    "$NOTES" \
+              --arg   started  "$STARTED" \
+              --arg   finished "$FINISHED" \
+              '{state:$state, progress_chapter:$prog, progress_volume:$vol, rating:$score, note:$notes}
+               + (if $started  != "" then {start_date:  $started}  else {} end)
+               + (if $finished != "" then {finish_date: $finished} else {} end)')
+
+            EXISTS=$(curl -s -o /dev/null -w "%{http_code}" \
+              "https://api.mangabaka.dev/v1/my/library/${MB_ID}" \
+              -H "Authorization: Bearer $MB_TOKEN" \
+              -H "Accept: application/json")
+
+            METHOD="PUT"
+            [ "$EXISTS" != "200" ] && METHOD="POST"
+
+            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+              -X "$METHOD" "https://api.mangabaka.dev/v1/my/library/${MB_ID}" \
+              -H "Authorization: Bearer $MB_TOKEN" \
+              -H "Content-Type: application/json" \
+              -H "Accept: application/json" \
+              -d "$PAYLOAD")
+
+            echo "[$HTTP_STATUS] $METHOD mb=$MB_ID ani=$ANI_ID state=$MB_STATUS prog=$PROGRESS"
+
+            sleep 2
+          done
+
+      - name: Save updated tokens to cache
+        if: inputs.setup_mode != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: /tmp/mb_tokens.json
+          key: mb-tokens-${{ github.run_id }}
