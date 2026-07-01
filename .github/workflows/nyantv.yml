@@ -79,14 +79,24 @@ jobs:
         run: |
           set -e
 
+          gh label create "pull-request" --repo "$TARGET_REPO" --color "1d76db" --description "Mirrored pull request" --force
+
           sync_item() {
             local NUMBER=$1
             local KIND=$2 # "issue" or "pr"
             local MARKER="Synced from ${SOURCE_REPO}#${NUMBER}"
 
-            local EXISTING
-            EXISTING=$(gh api -X GET search/issues -f q="repo:${TARGET_REPO} in:body \"${MARKER}\"" --jq '.items[0].number // empty')
+            local CANDIDATES EXISTING CAND CAND_BODY
+            CANDIDATES=$(gh api -X GET search/issues -f q="repo:${TARGET_REPO} in:body \"${MARKER}\"" --jq '.items[].number // empty')
             sleep 1
+            EXISTING=""
+            for CAND in $CANDIDATES; do
+              CAND_BODY=$(gh api "repos/${TARGET_REPO}/issues/${CAND}" --jq '.body // ""')
+              if echo "$CAND_BODY" | grep -qF "$MARKER"; then
+                EXISTING="$CAND"
+                break
+              fi
+            done
             if [ -n "$EXISTING" ]; then
               echo "Already synced: ${KIND} #${NUMBER} -> target #${EXISTING}"
               return
