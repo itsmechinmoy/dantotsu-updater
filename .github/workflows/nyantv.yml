@@ -22,6 +22,7 @@ jobs:
         with:
           repository: NyanTV/NyanTV
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Configure Git identity
         run: |
