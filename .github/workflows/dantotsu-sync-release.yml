@@ -351,12 +351,12 @@ jobs:
           COMMIT_LOG: ${{ steps.commit-log.outputs.COMMIT_LOG }}
         run: |
           cd app/build/outputs/apk/google/release/
-          if [ -f "app-google-universal-release.apk" ]; then
-            APK_PATH="app-google-universal-release.apk"
+          if [ -f "app-google-arm64-v8a-release.apk" ]; then
+            APK_PATH="app-google-arm64-v8a-release.apk"
           elif [ -f "app-google-release.apk" ]; then
             APK_PATH="app-google-release.apk"
           else
-            echo "No universal APK found!"
+            echo "No arm64-v8a APK found!"
             exit 1
           fi
           
