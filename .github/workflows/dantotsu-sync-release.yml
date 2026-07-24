@@ -63,16 +63,30 @@ jobs:
 
       - name: Download last SHA from latest release
         id: download-last-sha
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          LATEST_RELEASE=$(curl -s https://api.github.com/repos/itsmechinmoy/dantotsu-updater/releases/latest)
-          SHA_URL=$(echo "$LATEST_RELEASE" | jq -r '.assets[] | select(.name == "last_sha.txt") | .browser_download_url')
-          if [ -n "$SHA_URL" ]; then
-            curl -sL "$SHA_URL" -o last_sha.txt
-            echo "Downloaded last SHA from release"
+          HTTP_STATUS=$(curl -s -o release.json -w "%{http_code}" \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${{ github.repository }}/releases/latest")
+
+          if [ "$HTTP_STATUS" = "200" ]; then
+            SHA_URL=$(jq -r '.assets[]? | select(.name == "last_sha.txt") | .browser_download_url' release.json)
+            if [ -n "$SHA_URL" ] && [ "$SHA_URL" != "null" ]; then
+              curl -sfL "$SHA_URL" -o last_sha.txt
+              echo "Downloaded last SHA from release"
+            else
+              echo "Latest release has no last_sha.txt asset, treating as first run"
+            fi
+          elif [ "$HTTP_STATUS" = "404" ]; then
+            echo "No releases found yet, this is a genuine first run"
           else
-            echo "No last_sha.txt found in latest release"
+            echo "::error::GitHub API returned HTTP $HTTP_STATUS while checking the latest release"
+            cat release.json
+            exit 1
           fi
-        continue-on-error: true
 
       - name: Check for updates
         id: compare
@@ -262,12 +276,12 @@ jobs:
           echo -e "Commits:\n" > commit_log.txt
           echo "$COMMIT_LOGS" | sed 's/●/\n●/g' | sed '/^$/d' >> commit_log.txt
 
-      #- name: Setup JDK 17
-      #  uses: actions/setup-java@v4
-      #  with:
-      #    distribution: "temurin"
-      #    java-version: 17
-      #    cache: gradle
+      - name: Setup JDK 17
+        uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
+        with:
+          distribution: "temurin"
+          java-version: 17
+          cache: gradle
 
       - name: Add Split APK Configuration
         run: |
@@ -338,7 +352,7 @@ jobs:
           } > commit_log_dantotsu.txt
 
       - name: Upload APK Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: Dantotsu-APKs
           retention-days: 5
@@ -381,18 +395,8 @@ jobs:
         run: |
           echo "${{ needs.check-updates.outputs.LATEST_SHA }}" > last_sha.txt
 
-      - name: Delete existing tags and releases if exists
-        run: |
-          TAG="v${{ needs.check-updates.outputs.VERSION }}"
-          gh release delete "$TAG" -y --repo itsmechinmoy/dantotsu-updater || true
-          git push https://${{ secrets.GITHUB_TOKEN }}@github.com/itsmechinmoy/dantotsu-updater.git :refs/tags/$TAG || true
-          gh release delete "$TAG" -y --repo itsmechinmoy/Dantotsu || true
-          git push https://${{ secrets.DANTOTSU_SYNC }}@github.com/itsmechinmoy/Dantotsu.git :refs/tags/$TAG || true
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Create Release in dantotsu-updater
-        uses: ncipollo/release-action@v1
+        uses: ncipollo/release-action@718ea10b132b3b2eba29c1007bb80653f286566b # v3.0.1
         with:
           tag: v${{ needs.check-updates.outputs.VERSION }}
           name: Dantotsu v${{ needs.check-updates.outputs.VERSION }}
@@ -401,10 +405,11 @@ jobs:
             app/build/outputs/apk/google/release/*.apk
             last_sha.txt
           token: ${{ secrets.GITHUB_TOKEN }}
+          allowUpdates: true
           makeLatest: true
 
       - name: Create Release in Dantotsu
-        uses: ncipollo/release-action@v1
+        uses: ncipollo/release-action@718ea10b132b3b2eba29c1007bb80653f286566b # v3.0.1
         with:
           tag: v${{ needs.check-updates.outputs.VERSION }}
           name: Dantotsu v${{ needs.check-updates.outputs.VERSION }}
@@ -413,10 +418,11 @@ jobs:
           token: ${{ secrets.DANTOTSU_SYNC }}
           repo: Dantotsu
           owner: itsmechinmoy
+          allowUpdates: true
           makeLatest: true
 
       - name: Upload Commit Log Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: commit-log
           path: |
