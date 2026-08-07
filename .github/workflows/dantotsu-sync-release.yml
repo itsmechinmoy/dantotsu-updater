@@ -396,7 +396,7 @@ jobs:
           echo "${{ needs.check-updates.outputs.LATEST_SHA }}" > last_sha.txt
 
       - name: Create Release in dantotsu-updater
-        uses: ncipollo/release-action@718ea10b132b3b2eba29c1007bb80653f286566b # v3.0.1
+        uses: ncipollo/release-action@339a81892b84b4eeb0f6e744e4574d79d0d9b8dd # v1.21.0
         with:
           tag: v${{ needs.check-updates.outputs.VERSION }}
           name: Dantotsu v${{ needs.check-updates.outputs.VERSION }}
@@ -409,7 +409,7 @@ jobs:
           makeLatest: true
 
       - name: Create Release in Dantotsu
-        uses: ncipollo/release-action@718ea10b132b3b2eba29c1007bb80653f286566b # v3.0.1
+        uses: ncipollo/release-action@339a81892b84b4eeb0f6e744e4574d79d0d9b8dd # v1.21.0
         with:
           tag: v${{ needs.check-updates.outputs.VERSION }}
           name: Dantotsu v${{ needs.check-updates.outputs.VERSION }}
