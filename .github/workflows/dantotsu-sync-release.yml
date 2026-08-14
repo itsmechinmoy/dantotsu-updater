@@ -277,7 +277,7 @@ jobs:
           echo "$COMMIT_LOGS" | sed 's/●/\n●/g' | sed '/^$/d' >> commit_log.txt
 
       - name: Setup JDK 21
-        uses: actions/setup-java@5
+        uses: actions/setup-java@v5
         with:
           distribution: "temurin"
           java-version: 21
