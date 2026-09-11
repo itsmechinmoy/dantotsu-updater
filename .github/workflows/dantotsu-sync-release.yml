@@ -113,9 +113,13 @@ jobs:
         if: steps.compare.outputs.SHOULD_RUN == 'true'
         id: version
         run: |
-          VER=$(grep -E -o 'versionName = "[^"]*"' app/build.gradle.kts | cut -d'"' -f2)
+          VER=$(grep -E -o '(baseVersion|versionName) = "[^"]*"' app/build.gradle.kts | head -n 1 | cut -d'"' -f2)
           SHA=$(git rev-parse HEAD)
-          VERSION="${VER}+${SHA:0:7}"
+          if [ -n "$VER" ]; then
+            VERSION="${VER}+${SHA:0:7}"
+          else
+            VERSION="${SHA:0:7}"
+          fi
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
           echo "Version: $VERSION"
 
@@ -268,7 +272,7 @@ jobs:
             COMMIT_LOGS="● No new commits since last release"
           fi
           COMMIT_LOGS=$(echo "$COMMIT_LOGS" | sed -E "s@#([0-9]+)@[#\1](${REPO_URL}/pull/\1)@g")
-          # Save for Telegram
+          # Save for Telegram (disabled)
           echo "COMMIT_LOG<<EOF" >> $GITHUB_OUTPUT
           echo "$COMMIT_LOGS" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
@@ -301,6 +305,8 @@ jobs:
         run: echo "${{ secrets.KEYSTORE_FILE }}" | base64 -d > $GITHUB_WORKSPACE/key.keystore
 
       - name: Build APKs
+        env:
+          COMMIT_HASH: ${{ needs.check-updates.outputs.LATEST_SHA }}
         run: |
           chmod +x ./gradlew
           ./gradlew assembleGoogleRelease \
@@ -359,37 +365,37 @@ jobs:
           compression-level: 9
           path: app/build/outputs/apk/google/release/*.apk
 
-      - name: Upload to Telegram
-        env:
-          VERSION: ${{ needs.check-updates.outputs.VERSION }}
-          COMMIT_LOG: ${{ steps.commit-log.outputs.COMMIT_LOG }}
-        run: |
-          cd app/build/outputs/apk/google/release/
-          if [ -f "app-google-arm64-v8a-release.apk" ]; then
-            APK_PATH="app-google-arm64-v8a-release.apk"
-          elif [ -f "app-google-release.apk" ]; then
-            APK_PATH="app-google-release.apk"
-          else
-            echo "No arm64-v8a APK found!"
-            exit 1
-          fi
-          
-          telegram_commit_messages=$(echo "$COMMIT_LOG" | while read -r line; do
-            message=$(echo "$line" | sed -E 's/● (.*) ~(.*) \[֍\]\((.*)\)/● \1 ~\2 <a href="\3">֍<\/a>/')
-            message=$(echo "$message" | sed -E 's/\[#([0-9]+)\]\((https:\/\/[^)]+)\)/<a href="\2">#\1<\/a>/g')
-            echo "$message"
-          done)
-          telegram_commit_messages="<blockquote>${telegram_commit_messages}</blockquote>"
-          
-          curl -sS -f -X POST \
-            "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendDocument" \
-            -F "chat_id=-1003463471716" \
-            -F "document=@$APK_PATH" \
-            -F "caption=🔥 New Dantotsu Build Available!
-          Commits:
-          ${telegram_commit_messages}
-          Version: ${VERSION}" \
-            -F "parse_mode=HTML"
+      # - name: Upload to Telegram
+      #   env:
+      #     VERSION: ${{ needs.check-updates.outputs.VERSION }}
+      #     COMMIT_LOG: ${{ steps.commit-log.outputs.COMMIT_LOG }}
+      #   run: |
+      #     cd app/build/outputs/apk/google/release/
+      #     if [ -f "app-google-arm64-v8a-release.apk" ]; then
+      #       APK_PATH="app-google-arm64-v8a-release.apk"
+      #     elif [ -f "app-google-release.apk" ]; then
+      #       APK_PATH="app-google-release.apk"
+      #     else
+      #       echo "No arm64-v8a APK found!"
+      #       exit 1
+      #     fi
+      #     
+      #     telegram_commit_messages=$(echo "$COMMIT_LOG" | while read -r line; do
+      #       message=$(echo "$line" | sed -E 's/● (.*) ~(.*) \[֍\]\((.*)\)/● \1 ~\2 <a href="\3">֍<\/a>/')
+      #       message=$(echo "$message" | sed -E 's/\[#([0-9]+)\]\((https:\/\/[^)]+)\)/<a href="\2">#\1<\/a>/g')
+      #       echo "$message"
+      #     done)
+      #     telegram_commit_messages="<blockquote>${telegram_commit_messages}</blockquote>"
+      #     
+      #     curl -sS -f -X POST \
+      #       "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendDocument" \
+      #       -F "chat_id=-1003463471716" \
+      #       -F "document=@$APK_PATH" \
+      #       -F "caption=🔥 New Dantotsu Build Available!
+      #     Commits:
+      #     ${telegram_commit_messages}
+      #     Version: ${VERSION}" \
+      #       -F "parse_mode=HTML"
 
       - name: Save SHA for next run
         run: |
