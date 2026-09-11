@@ -61,6 +61,8 @@ jobs:
             -X POST "https://graphql.anilist.co/" \
             -H "Content-Type: application/json" \
             -H "Accept: application/json" \
+            -H "Referer: https://anilist.co/" \
+            -H "Origin: https://anilist.co" \
             -d '{"query":"{ Media(id:1) { id } }"}')
 
           STATUS_CODE="$RESPONSE"
@@ -96,10 +98,8 @@ jobs:
         env:
           WEBHOOK_DAN: ${{ secrets.ANILIST_WEBHOOK_DAN }}
           WEBHOOK_DART: ${{ secrets.ANILIST_WEBHOOK_DART }}
-          WEBHOOK_ANYMEX: ${{ secrets.ANILIST_WEBHOOK_ANYMEX }}
           ROLE_DAN: ${{ secrets.ANILIST_ROLE_DAN }}
           ROLE_DART: ${{ secrets.ANILIST_ROLE_DART }}
-          ROLE_ANYMEX: ${{ secrets.ANILIST_ROLE_ANYMEX }}
         run: |
           TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
           ERROR_MSG="${{ steps.check.outputs.ERROR_MSG }}"
@@ -134,14 +134,12 @@ jobs:
 
           send "$WEBHOOK_DAN" "$ROLE_DAN"
           send "$WEBHOOK_DART" "$ROLE_DART"
-          send "$WEBHOOK_ANYMEX" "$ROLE_ANYMEX"
 
       - name: Notify Up
         if: steps.check.outputs.STATUS == 'up' && steps.prev.outputs.PREV_STATUS == 'down'
         env:
           WEBHOOK_DAN: ${{ secrets.ANILIST_WEBHOOK_DAN }}
           WEBHOOK_DART: ${{ secrets.ANILIST_WEBHOOK_DART }}
-          WEBHOOK_ANYMEX: ${{ secrets.ANILIST_WEBHOOK_ANYMEX }}
         run: |
           TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
           DOWN_SINCE="${{ steps.prev.outputs.DOWN_SINCE }}"
@@ -186,7 +184,6 @@ jobs:
 
           send "$WEBHOOK_DAN"
           send "$WEBHOOK_DART"
-          send "$WEBHOOK_ANYMEX"
 
       - name: Save State
         run: |
