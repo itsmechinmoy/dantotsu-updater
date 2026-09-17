@@ -32,7 +32,7 @@ jobs:
           ANILIST_USERNAME: "itsmechinmoy"
           ANILIST_TOKEN: ${{ secrets.ANILIST_TOKEN }}
           MANGABAKA_API_KEY: ${{ secrets.MANGABAKA_API_KEY }}
-        run: python sync.py
+        run: python scripts/mangabaka-sync.py
 
       - name: Upload mapping artifact (90 days retention)
         uses: actions/upload-artifact@v4
