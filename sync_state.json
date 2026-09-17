@@ -1,0 +1,2327 @@
+{
+  "entries": {
+    "30011": {
+      "updatedAt": 1741019870,
+      "payload": {
+        "series_id": 270,
+        "state": "completed",
+        "progress_chapter": 700,
+        "progress_volume": 72,
+        "rating": 100,
+        "is_private": false,
+        "finish_date": "2021-12-22"
+      }
+    },
+    "123093": {
+      "updatedAt": 1719993512,
+      "payload": {
+        "series_id": 8175,
+        "state": "completed",
+        "progress_chapter": 132,
+        "progress_volume": 16,
+        "rating": 70,
+        "is_private": false,
+        "start_date": "2023-03-26",
+        "finish_date": "2024-05-05"
+      }
+    },
+    "36028": {
+      "updatedAt": 1741191445,
+      "payload": {
+        "series_id": 84639,
+        "state": "completed",
+        "progress_chapter": 19,
+        "progress_volume": 1,
+        "is_private": false
+      }
+    },
+    "36444": {
+      "updatedAt": 1741191459,
+      "payload": {
+        "series_id": 57337,
+        "state": "completed",
+        "progress_chapter": 1,
+        "progress_volume": 0,
+        "is_private": false
+      }
+    },
+    "53390": {
+      "updatedAt": 1740587039,
+      "payload": {
+        "series_id": 4024,
+        "state": "completed",
+        "progress_chapter": 141,
+        "progress_volume": 34,
+        "is_private": false
+      }
+    },
+    "60987": {
+      "updatedAt": 1740926085,
+      "payload": {
+        "series_id": 104460,
+        "state": "completed",
+        "progress_chapter": 1,
+        "progress_volume": 0,
+        "is_private": false
+      }
+    },
+    "63327": {
+      "updatedAt": 1740926257,
+      "payload": {
+        "series_id": 2813,
+        "state": "completed",
+        "progress_chapter": 144,
+        "progress_volume": 14,
+        "is_private": false
+      }
+    },
+    "65243": {
+      "updatedAt": 1740926345,
+      "payload": {
+        "series_id": 8718,
+        "state": "completed",
+        "progress_chapter": 404,
+        "progress_volume": 45,
+        "is_private": false
+      }
+    },
+    "66535": {
+      "updatedAt": 1741191850,
+      "payload": {
+        "series_id": 17137,
+        "state": "completed",
+        "progress_chapter": 96,
+        "progress_volume": 11,
+        "is_private": false
+      }
+    },
+    "70225": {
+      "updatedAt": 1741191920,
+      "payload": {
+        "series_id": 101191,
+        "state": "completed",
+        "progress_chapter": 14,
+        "progress_volume": 2,
+        "is_private": false
+      }
+    },
+    "73999": {
+      "updatedAt": 1741190513,
+      "payload": {
+        "series_id": 85179,
+        "state": "completed",
+        "progress_chapter": 15,
+        "progress_volume": 3,
+        "is_private": false
+      }
+    },
+    "85312": {
+      "updatedAt": 1741190583,
+      "payload": {
+        "series_id": 17894,
+        "state": "completed",
+        "progress_chapter": 73,
+        "progress_volume": 17,
+        "is_private": false
+      }
+    },
+    "85199": {
+      "updatedAt": 1741190597,
+      "payload": {
+        "series_id": 18099,
+        "state": "completed",
+        "progress_chapter": 11,
+        "progress_volume": 2,
+        "is_private": false
+      }
+    },
+    "91850": {
+      "updatedAt": 1741015941,
+      "payload": {
+        "series_id": 83605,
+        "state": "completed",
+        "progress_chapter": 0,
+        "progress_volume": 13,
+        "rating": 60,
+        "is_private": false,
+        "finish_date": "2023-04-08"
+      }
+    },
+    "87233": {
+      "updatedAt": 1741190728,
+      "payload": {
+        "series_id": 101377,
+        "state": "completed",
+        "progress_chapter": 6,
+        "progress_volume": 1,
+        "is_private": false
+      }
+    },
+    "85522": {
+      "updatedAt": 1741190742,
+      "payload": {
+        "series_id": 20138,
+        "state": "completed",
+        "progress_chapter": 7,
+        "progress_volume": 1,
+        "is_private": false
+      }
+    },
+    "87178": {
+      "updatedAt": 1741709221,
+      "payload": {
+        "series_id": 9768,
+        "state": "completed",
+        "progress_chapter": 81,
+        "progress_volume": 20,
+        "rating": 80,
+        "is_private": false,
+        "finish_date": "2023-12-20"
+      }
+    },
+    "102988": {
+      "updatedAt": 1742482857,
+      "payload": {
+        "series_id": 5391,
+        "state": "completed",
+        "progress_chapter": 279,
+        "progress_volume": 31,
+        "is_private": false
+      }
+    },
+    "105778": {
+      "updatedAt": 1775185227,
+      "payload": {
+        "series_id": 1677,
+        "state": "completed",
+        "progress_chapter": 232,
+        "progress_volume": 24,
+        "rating": 70,
+        "is_private": false,
+        "finish_date": "2026-04-03"
+      }
+    },
+    "147972": {
+      "updatedAt": 1742483755,
+      "payload": {
+        "series_id": 104463,
+        "state": "completed",
+        "progress_chapter": 1,
+        "progress_volume": 0,
+        "is_private": false
+      }
+    },
+    "55132": {
+      "updatedAt": 1741190458,
+      "payload": {
+        "series_id": 4897,
+        "state": "completed",
+        "progress_chapter": 80,
+        "progress_volume": 15,
+        "is_private": false
+      }
+    },
+    "85400": {
+      "updatedAt": 1741190555,
+      "payload": {
+        "series_id": 9548,
+        "state": "completed",
+        "progress_chapter": 60,
+        "progress_volume": 10,
+        "is_private": false
+      }
+    },
+    "86160": {
+      "updatedAt": 1741190784,
+      "payload": {
+        "series_id": 21205,
+        "state": "completed",
+        "progress_chapter": 50,
+        "progress_volume": 8,
+        "is_private": false
+      }
+    },
+    "95840": {
+      "updatedAt": 1741190826,
+      "payload": {
+        "series_id": 36549,
+        "state": "completed",
+        "progress_chapter": 4,
+        "progress_volume": 1,
+        "is_private": false
+      }
+    },
+    "52745": {
+      "updatedAt": 1741191692,
+      "payload": {
+        "series_id": 101925,
+        "state": "completed",
+        "progress_chapter": 3,
+        "progress_volume": 1,
+        "rating": 90,
+        "is_private": false,
+        "finish_date": "2023-07-08"
+      }
+    },
+    "67303": {
+      "updatedAt": 1741191864,
+      "payload": {
+        "series_id": 13613,
+        "state": "completed",
+        "progress_chapter": 10,
+        "progress_volume": 2,
+        "rating": 80,
+        "is_private": false,
+        "finish_date": "2023-07-08"
+      }
+    },
+    "117412": {
+      "updatedAt": 1742481498,
+      "payload": {
+        "series_id": 101917,
+        "state": "completed",
+        "progress_chapter": 15,
+        "progress_volume": 1,
+        "rating": 90,
+        "is_private": false,
+        "finish_date": "2023-07-08"
+      }
+    },
+    "54227": {
+      "updatedAt": 1741191720,
+      "payload": {
+        "series_id": 122130,
+        "state": "completed",
+        "progress_chapter": 4,
+        "progress_volume": 1,
+        "is_private": false,
+        "finish_date": "2023-08-21"
+      }
+    },
+    "112493": {
+      "updatedAt": 1741708918,
+      "payload": {
+        "series_id": 100259,
+        "state": "completed",
+        "progress_chapter": 58,
+        "progress_volume": 5,
+        "is_private": false,
+        "finish_date": "2023-08-21"
+      }
+    },
+    "37458": {
+      "updatedAt": 1741191473,
+      "payload": {
+        "series_id": 83210,
+        "state": "completed",
+        "progress_chapter": 8,
+        "progress_volume": 1,
+        "is_private": false,
+        "finish_date": "2023-08-24"
+      }
+    },
+    "127819": {
+      "updatedAt": 1742483614,
+      "payload": {
+        "series_id": 66131,
+        "state": "completed",
+        "progress_chapter": 6,
+        "progress_volume": 1,
+        "is_private": false,
+        "finish_date": "2023-08-24"
+      }
+    },
+    "138829": {
+      "updatedAt": 1741019534,
+      "payload": {
+        "series_id": 83072,
+        "state": "completed",
+        "progress_chapter": 4,
+        "progress_volume": 1,
+        "is_private": false,
+        "finish_date": "2023-08-24"
+      }
+    },
+    "105160": {
+      "updatedAt": 1742483252,
+      "payload": {
+        "series_id": 30231,
+        "state": "completed",
+        "progress_chapter": 76,
+        "progress_volume": 8,
+        "rating": 100,
+        "is_private": false,
+        "start_date": "2023-11-15",
+        "finish_date": "2023-11-15"
+      }
+    },
+    "135190": {
+      "updatedAt": 1742483559,
+      "payload": {
+        "series_id": 82301,
+        "state": "completed",
+        "progress_chapter": 16,
+        "progress_volume": 2,
+        "rating": 100,
+        "is_private": false,
+        "start_date": "2023-11-09",
+        "finish_date": "2023-11-09"
+      }
+    },
+    "85470": {
+      "updatedAt": 1741015761,
+      "payload": {
+        "series_id": 84589,
+        "state": "completed",
+        "progress_chapter": 334,
+        "progress_volume": 26,
+        "rating": 100,
+        "is_private": false
+      }
+    },
+    "40490": {
+      "updatedAt": 1741191525,
+      "payload": {
+        "series_id": 103832,
+        "state": "completed",
+        "progress_chapter": 0,
+        "progress_volume": 21,
+        "is_private": false,
+        "finish_date": "2023-12-20"
+      }
+    },
+    "53568": {
+      "updatedAt": 1741191703,
+      "payload": {
+        "series_id": 101230,
+        "state": "completed",
+        "progress_chapter": 1,
+        "progress_volume": 0,
+        "is_private": false,
+        "start_date": "2023-12-20",
+        "finish_date": "2024-01-04"
+      }
+    },
+    "58121": {
+      "updatedAt": 1740925863,
+      "payload": {
+        "series_id": 12373,
+        "state": "completed",
+        "progress_chapter": 39,
+        "progress_volume": 8,
+        "rating": 100,
+        "is_private": false,
+        "finish_date": "2023-12-21"
+      }
+    },
+    "62425": {
+      "updatedAt": 1740926174,
+      "payload": {
+        "series_id": 542,
+        "state": "completed",
+        "progress_chapter": 41,
+        "progress_volume": 6,
+        "is_private": false,
+        "finish_date": "2023-12-20"
+      }
+    },
+    "69847": {
+      "updatedAt": 1740926526,
+      "payload": {
+        "series_id": 14295,
+        "state": "completed",
+        "progress_chapter": 29,
+        "progress_volume": 7,
+        "rating": 100,
+        "is_private": false,
+        "start_date": "2023-12-21",
+        "finish_date": "2023-12-21"
+      }
+    },
+    "80295": {
+      "updatedAt": 1741015359,
+      "payload": {
+        "series_id": 100967,
+        "state": "completed",
+        "progress_chapter": 1,
+        "progress_volume": 0,
+        "is_private": false,
+        "start_date": "2023-12-20",
+        "finish_date": "2024-01-04"
+      }
+    },
+    "85754": {
+      "updatedAt": 1741190611,
+      "payload": {
+        "series_id": 4416,
+        "state": "completed",
+        "progress_chapter": 38,
+        "progress_volume": 5,
+        "is_private": false,
+        "finish_date": "2023-12-20"
+      }
+    },
+    "85866": {
+      "updatedAt": 1741190694,
+      "payload": {
+        "series_id": 13764,
+        "state": "completed",
+        "progress_chapter": 18,
+        "progress_volume": 1,
+        "rating": 90,
+        "is_private": false,
+        "start_date": "2023-12-21",
+        "finish_date": "2023-12-21"
+      }
+    },
+    "146401": {
+      "updatedAt": 1741016473,
+      "payload": {
+        "series_id": 151624,
+        "state": "completed",
+        "progress_chapter": 0,
+        "progress_volume": 2,
+        "is_private": false,
+        "finish_date": "2023-12-20"
+      }
+    },
+    "94656": {
+      "updatedAt": 1741709015,
+      "payload": {
+        "series_id": 100842,
+        "state": "completed",
+        "progress_chapter": 7,
+        "progress_volume": 1,
+        "is_private": false,
+        "finish_date": "2023-12-20"
+      }
+    },
+    "87201": {
+      "updatedAt": 1746277778,
+      "payload": {
+        "series_id": 6026,
+        "state": "completed",
+        "progress_chapter": 77,
+        "progress_volume": 8,
+        "rating": 60,
+        "is_private": false,
+        "start_date": "2023-12-20",
+        "finish_date": "2024-10-05"
+      }
+    },
+    "87195": {
+      "updatedAt": 1741709124,
+      "payload": {
+        "series_id": 104866,
+        "state": "completed",
+        "progress_chapter": 16,
+        "progress_volume": 2,
+        "is_private": false,
+        "finish_date": "2023-12-20"
+      }
+    },
+    "96082": {
+      "updatedAt": 1741709180,
+      "payload": {
+        "series_id": 15947,
+        "state": "completed",
+        "progress_chapter": 1,
+        "progress_volume": 0,
+        "is_private": false,
+        "start_date": "2023-12-20",
+        "finish_date": "2024-01-04"
+      }
+    },
+    "107554": {
+      "updatedAt": 1742483180,
+      "payload": {
+        "series_id": 6009,
+        "state": "completed",
+        "progress_chapter": 37,
+        "progress_volume": 6,
+        "is_private": false,
+        "finish_date": "2023-12-20"
+      }
+    },
+    "107556": {
+      "updatedAt": 1753760798,
+      "payload": {
+        "series_id": 2037,
+        "state": "completed",
+        "progress_chapter": 68,
+        "progress_volume": 8,
+        "rating": 60,
+        "is_private": false,
+        "start_date": "2023-12-20",
+        "finish_date": "2025-07-28"
+      }
+    },
+    "114046": {
+      "updatedAt": 1742483418,
+      "payload": {
+        "series_id": 101520,
+        "state": "completed",
+        "progress_chapter": 8,
+        "progress_volume": 1,
+        "is_private": false,
+        "finish_date": "2023-12-20"
+      }
+    },
+    "167515": {
+      "updatedAt": 1741019780,
+      "payload": {
+        "series_id": 4193,
+        "state": "completed",
+        "progress_chapter": 1,
+        "progress_volume": 0,
+        "is_private": false,
+        "start_date": "2023-12-20",
+        "finish_date": "2024-01-04"
+      }
+    },
+    "86742": {
+      "updatedAt": 1741190680,
+      "payload": {
+        "series_id": 7890,
+        "state": "completed",
+        "progress_chapter": 97,
+        "progress_volume": 23,
+        "rating": 90,
+        "is_private": false,
+        "start_date": "2023-12-27",
+        "finish_date": "2023-12-27"
+      }
+    },
+    "153338": {
+      "updatedAt": 1741019684,
+      "payload": {
+        "series_id": 60525,
+        "state": "completed",
+        "progress_chapter": 0,
+        "progress_volume": 5,
+        "is_private": false,
+        "start_date": "2024-01-03",
+        "finish_date": "2024-10-05"
+      }
+    },
+    "88353": {
+      "updatedAt": 1741190569,
+      "payload": {
+        "series_id": 101193,
+        "state": "completed",
+        "progress_chapter": 16,
+        "progress_volume": 1,
+        "rating": 80,
+        "is_private": false,
+        "start_date": "2024-01-10",
+        "finish_date": "2024-01-10"
+      }
+    },
+    "95781": {
+      "updatedAt": 1741709138,
+      "payload": {
+        "series_id": 83030,
+        "state": "completed",
+        "progress_chapter": 7,
+        "progress_volume": 1,
+        "rating": 80,
+        "is_private": false,
+        "start_date": "2024-01-10",
+        "finish_date": "2024-01-10"
+      }
+    },
+    "87402": {
+      "updatedAt": 1741016832,
+      "payload": {
+        "series_id": 22038,
+        "state": "completed",
+        "progress_chapter": 1,
+        "progress_volume": 0,
+        "rating": 70,
+        "is_private": false,
+        "start_date": "2024-01-10",
+        "finish_date": "2024-01-10"
+      }
+    },
+    "132771": {
+      "updatedAt": 1741017132,
+      "payload": {
+        "series_id": 101198,
+        "state": "completed",
+        "progress_chapter": 0,
+        "progress_volume": 1,
+        "rating": 80,
+        "is_private": false,
+        "start_date": "2024-01-10",
+        "finish_date": "2024-01-10"
+      }
+    },
+    "132773": {
+      "updatedAt": 1741017187,
+      "payload": {
+        "series_id": 101200,
+        "state": "completed",
+        "progress_chapter": 0,
+        "progress_volume": 1,
+        "rating": 70,
+        "is_private": false,
+        "start_date": "2024-01-10",
+        "finish_date": "2024-01-10"
+      }
+    },
+    "132777": {
+      "updatedAt": 1741190887,
+      "payload": {
+        "series_id": 101202,
+        "state": "completed",
+        "progress_chapter": 0,
+        "progress_volume": 1,
+        "rating": 80,
+        "is_private": false,
+        "start_date": "2024-01-10",
+        "finish_date": "2024-01-10"
+      }
+    },
+    "97219": {
+      "updatedAt": 1741190901,
+      "payload": {
+        "series_id": 100635,
+        "state": "completed",
+        "progress_chapter": 7,
+        "progress_volume": 1,
+        "rating": 70,
+        "is_private": false,
+        "start_date": "2024-01-10",
+        "finish_date": "2024-01-10"
+      }
+    },
+    "121169": {
+      "updatedAt": 1742483083,
+      "payload": {
+        "series_id": 67700,
+        "state": "completed",
+        "progress_chapter": 1,
+        "progress_volume": 0,
+        "rating": 60,
+        "is_private": false,
+        "start_date": "2024-01-10",
+        "finish_date": "2024-01-10"
+      }
+    },
+    "142846": {
+      "updatedAt": 1742483817,
+      "payload": {
+        "series_id": 56798,
+        "state": "completed",
+        "progress_chapter": 15,
+        "progress_volume": 2,
+        "rating": 70,
+        "is_private": false,
+        "start_date": "2024-01-10",
+        "finish_date": "2024-01-10"
+      }
+    },
+    "165485": {
+      "updatedAt": 1742483853,
+      "payload": {
+        "series_id": 66698,
+        "state": "completed",
+        "progress_chapter": 1,
+        "progress_volume": 0,
+        "rating": 80,
+        "is_private": false,
+        "start_date": "2024-01-10",
+        "finish_date": "2024-01-10"
+      }
+    },
+    "170755": {
+      "updatedAt": 1741019794,
+      "payload": {
+        "series_id": 73224,
+        "state": "completed",
+        "progress_chapter": 3,
+        "progress_volume": 0,
+        "rating": 80,
+        "is_private": false,
+        "start_date": "2024-01-10",
+        "finish_date": "2024-01-10"
+      }
+    },
+    "48926": {
+      "updatedAt": 1741190429,
+      "payload": {
+        "series_id": 83851,
+        "state": "completed",
+        "progress_chapter": 77,
+        "progress_volume": 13,
+        "rating": 60,
+        "is_private": false,
+        "start_date": "2024-01-16",
+        "finish_date": "2024-01-16"
+      }
+    },
+    "51587": {
+      "updatedAt": 1741190443,
+      "payload": {
+        "series_id": 21023,
+        "state": "completed",
+        "progress_chapter": 34,
+        "progress_volume": 2,
+        "rating": 70,
+        "is_private": false,
+        "start_date": "2024-01-16",
+        "finish_date": "2024-01-16"
+      }
+    },
+    "79547": {
+      "updatedAt": 1741192015,
+      "payload": {
+        "series_id": 17567,
+        "state": "completed",
+        "progress_chapter": 19,
+        "progress_volume": 3,
+        "rating": 70,
+        "is_private": false,
+        "start_date": "2024-01-16",
+        "finish_date": "2024-01-16"
+      }
+    },
+    "111676": {
+      "updatedAt": 1741017514,
+      "payload": {
+        "series_id": 85887,
+        "state": "completed",
+        "progress_chapter": 58,
+        "progress_volume": 7,
+        "rating": 90,
+        "is_private": false,
+        "start_date": "2024-01-23",
+        "finish_date": "2024-01-23"
+      }
+    },
+    "166150": {
+      "updatedAt": 1741019699,
+      "payload": {
+        "series_id": 65077,
+        "state": "completed",
+        "progress_chapter": 28,
+        "progress_volume": 4,
+        "rating": 70,
+        "is_private": false,
+        "start_date": "2024-01-29"
+      }
+    },
+    "31032": {
+      "updatedAt": 1740585610,
+      "payload": {
+        "series_id": 9194,
+        "state": "completed",
+        "progress_chapter": 821,
+        "progress_volume": 45,
+        "rating": 80,
+        "is_private": false,
+        "start_date": "2024-01-30",
+        "finish_date": "2024-01-30"
+      }
+    },
+    "41454": {
+      "updatedAt": 1740586309,
+      "payload": {
+        "series_id": 39642,
+        "state": "completed",
+        "progress_chapter": 145,
+        "progress_volume": 7,
+        "rating": 60,
+        "is_private": false,
+        "start_date": "2024-01-30",
+        "finish_date": "2024-01-30"
+      }
+    },
+    "54238": {
+      "updatedAt": 1740925754,
+      "payload": {
+        "series_id": 8761,
+        "state": "completed",
+        "progress_chapter": 1,
+        "progress_volume": 0,
+        "rating": 50,
+        "is_private": false,
+        "start_date": "2024-01-30",
+        "finish_date": "2024-02-07"
+      }
+    },
+    "134727": {
+      "updatedAt": 1742483711,
+      "payload": {
+        "series_id": 39290,
+        "state": "completed",
+        "progress_chapter": 1,
+        "progress_volume": 1,
+        "rating": 60,
+        "is_private": false,
+        "start_date": "2024-01-30"
+      }
+    },
+    "62445": {
+      "updatedAt": 1748185156,
+      "payload": {
+        "series_id": 83601,
+        "state": "completed",
+        "progress_chapter": 66,
+        "progress_volume": 11,
+        "rating": 70,
+        "is_private": false
+      }
+    },
+    "100935": {
+      "updatedAt": 1741016165,
+      "payload": {
+        "series_id": 20302,
+        "state": "completed",
+        "progress_chapter": 12,
+        "progress_volume": 1,
+        "rating": 60,
+        "is_private": false
+      }
+    },
+    "104724": {
+      "updatedAt": 1741018589,
+      "payload": {
+        "series_id": 28521,
+        "state": "completed",
+        "progress_chapter": 64,
+        "progress_volume": 12,
+        "rating": 70,
+        "is_private": false
+      }
+    },
+    "142989": {
+      "updatedAt": 1731775797,
+      "payload": {
+        "series_id": 603,
+        "state": "completed",
+        "progress_chapter": 16,
+        "progress_volume": 2,
+        "is_private": false,
+        "start_date": "2024-02-05",
+        "finish_date": "2024-11-16"
+      }
+    },
+    "146378": {
+      "updatedAt": 1742483733,
+      "payload": {
+        "series_id": 9594,
+        "state": "completed",
+        "progress_chapter": 6,
+        "progress_volume": 1,
+        "rating": 70,
+        "is_private": false
+      }
+    },
+    "32333": {
+      "updatedAt": 1740585749,
+      "payload": {
+        "series_id": 29663,
+        "state": "completed",
+        "progress_chapter": 1,
+        "progress_volume": 0,
+        "rating": 70,
+        "is_private": false
+      }
+    },
+    "34795": {
+      "updatedAt": 1740585996,
+      "payload": {
+        "series_id": 85021,
+        "state": "completed",
+        "progress_chapter": 41,
+        "progress_volume": 2,
+        "rating": 70,
+        "is_private": false
+      }
+    },
+    "51135": {
+      "updatedAt": 1741191622,
+      "payload": {
+        "series_id": 99404,
+        "state": "completed",
+        "progress_chapter": 7,
+        "progress_volume": 1,
+        "rating": 60,
+        "is_private": false
+      }
+    },
+    "51597": {
+      "updatedAt": 1740586792,
+      "payload": {
+        "series_id": 112482,
+        "state": "completed",
+        "progress_chapter": 3,
+        "progress_volume": 1,
+        "rating": 60,
+        "is_private": false
+      }
+    },
+    "85420": {
+      "updatedAt": 1741015481,
+      "payload": {
+        "series_id": 101489,
+        "state": "completed",
+        "progress_chapter": 1,
+        "progress_volume": 1,
+        "rating": 60,
+        "is_private": false
+      }
+    },
+    "89879": {
+      "updatedAt": 1741015610,
+      "payload": {
+        "series_id": 2572,
+        "state": "completed",
+        "progress_chapter": 55,
+        "progress_volume": 2,
+        "rating": 70,
+        "is_private": false
+      }
+    },
+    "91811": {
+      "updatedAt": 1741708700,
+      "payload": {
+        "series_id": 2833,
+        "state": "completed",
+        "progress_chapter": 8,
+        "progress_volume": 1,
+        "rating": 70,
+        "is_private": false
+      }
+    },
+    "100232": {
+      "updatedAt": 1741708741,
+      "payload": {
+        "series_id": 85181,
+        "state": "completed",
+        "progress_chapter": 7,
+        "progress_volume": 2,
+        "rating": 70,
+        "is_private": false
+      }
+    },
+    "86718": {
+      "updatedAt": 1741708891,
+      "payload": {
+        "series_id": 20425,
+        "state": "completed",
+        "progress_chapter": 29,
+        "progress_volume": 4,
+        "rating": 70,
+        "is_private": false
+      }
+    },
+    "99886": {
+      "updatedAt": 1741017810,
+      "payload": {
+        "series_id": 25829,
+        "state": "completed",
+        "progress_chapter": 53,
+        "progress_volume": 8,
+        "rating": 70,
+        "is_private": false
+      }
+    },
+    "114227": {
+      "updatedAt": 1741019644,
+      "payload": {
+        "series_id": 34765,
+        "state": "completed",
+        "progress_chapter": 6,
+        "progress_volume": 1,
+        "is_private": false,
+        "finish_date": "2023-08-21"
+      }
+    },
+    "110174": {
+      "updatedAt": 1741018876,
+      "payload": {
+        "series_id": 32970,
+        "state": "completed",
+        "progress_chapter": 28,
+        "progress_volume": 4,
+        "rating": 80,
+        "is_private": false
+      }
+    },
+    "106489": {
+      "updatedAt": 1741019408,
+      "payload": {
+        "series_id": 31173,
+        "state": "completed",
+        "progress_chapter": 6,
+        "progress_volume": 1,
+        "rating": 60,
+        "is_private": false
+      }
+    },
+    "32921": {
+      "updatedAt": 1741191295,
+      "payload": {
+        "series_id": 3137,
+        "state": "completed",
+        "progress_chapter": 99,
+        "progress_volume": 18,
+        "rating": 70,
+        "is_private": false,
+        "start_date": "2024-02-07",
+        "finish_date": "2024-02-07"
+      }
+    },
+    "39134": {
+      "updatedAt": 1740586191,
+      "payload": {
+        "series_id": 5506,
+        "state": "completed",
+        "progress_chapter": 25,
+        "progress_volume": 3,
+        "rating": 70,
+        "is_private": false
+      }
+    },
+    "91579": {
+      "updatedAt": 1741015888,
+      "payload": {
+        "series_id": 21193,
+        "state": "completed",
+        "progress_chapter": 23,
+        "progress_volume": 4,
+        "rating": 70,
+        "is_private": false
+      }
+    },
+    "112533": {
+      "updatedAt": 1742481476,
+      "payload": {
+        "series_id": 33443,
+        "state": "completed",
+        "progress_chapter": 11,
+        "progress_volume": 2,
+        "rating": 60,
+        "is_private": false
+      }
+    },
+    "33468": {
+      "updatedAt": 1719170186,
+      "payload": {
+        "series_id": 11380,
+        "state": "completed",
+        "progress_chapter": 62,
+        "progress_volume": 10,
+        "rating": 60,
+        "is_private": false,
+        "start_date": "2024-02-09",
+        "finish_date": "2024-02-09"
+      }
+    },
+    "85966": {
+      "updatedAt": 1741016035,
+      "payload": {
+        "series_id": 7678,
+        "state": "completed",
+        "progress_chapter": 186,
+        "progress_volume": 11,
+        "rating": 60,
+        "is_private": false,
+        "start_date": "2024-02-09",
+        "finish_date": "2024-02-09"
+      }
+    },
+    "105398": {
+      "updatedAt": 1755879530,
+      "payload": {
+        "series_id": 3397,
+        "state": "completed",
+        "progress_chapter": 201,
+        "progress_volume": 3,
+        "rating": 70,
+        "is_private": false,
+        "start_date": "2025-03-02",
+        "finish_date": "2025-03-03"
+      }
+    },
+    "111748": {
+      "updatedAt": 1719170186,
+      "payload": {
+        "series_id": 92333,
+        "state": "completed",
+        "progress_chapter": 160,
+        "progress_volume": 0,
+        "rating": 68,
+        "is_private": false,
+        "start_date": "2024-03-02",
+        "finish_date": "2024-03-03"
+      }
+    },
+    "106260": {
+      "updatedAt": 1719170186,
+      "payload": {
+        "series_id": 92430,
+        "state": "completed",
+        "progress_chapter": 52,
+        "progress_volume": 0,
+        "rating": 67,
+        "is_private": false,
+        "start_date": "2024-03-02",
+        "finish_date": "2024-03-03"
+      }
+    },
+    "150321": {
+      "updatedAt": 1719170186,
+      "payload": {
+        "series_id": 91654,
+        "state": "completed",
+        "progress_chapter": 30,
+        "progress_volume": 0,
+        "rating": 69,
+        "is_private": false,
+        "start_date": "2024-03-02",
+        "finish_date": "2024-03-03"
+      }
+    },
+    "131965": {
+      "updatedAt": 1719170186,
+      "payload": {
+        "series_id": 91804,
+        "state": "completed",
+        "progress_chapter": 112,
+        "progress_volume": 0,
+        "rating": 76,
+        "is_private": false,
+        "finish_date": "2024-03-03"
+      }
+    },
+    "154354": {
+      "updatedAt": 1719170186,
+      "payload": {
+        "series_id": 91483,
+        "state": "completed",
+        "progress_chapter": 50,
+        "progress_volume": 0,
+        "rating": 50,
+        "is_private": false,
+        "start_date": "2024-05-02",
+        "finish_date": "2024-05-03"
+      }
+    },
+    "128477": {
+      "updatedAt": 1719170186,
+      "payload": {
+        "series_id": 113602,
+        "state": "completed",
+        "progress_chapter": 110,
+        "progress_volume": 0,
+        "rating": 35,
+        "is_private": false,
+        "finish_date": "2024-03-03"
+      }
+    },
+    "116774": {
+      "updatedAt": 1719170186,
+      "payload": {
+        "series_id": 113268,
+        "state": "completed",
+        "progress_chapter": 82,
+        "progress_volume": 0,
+        "rating": 56,
+        "is_private": false,
+        "finish_date": "2024-03-03"
+      }
+    },
+    "133015": {
+      "updatedAt": 1719170186,
+      "payload": {
+        "series_id": 113975,
+        "state": "completed",
+        "progress_chapter": 100,
+        "progress_volume": 0,
+        "rating": 57,
+        "is_private": false,
+        "finish_date": "2024-03-03"
+      }
+    },
+    "88712": {
+      "updatedAt": 1719170186,
+      "payload": {
+        "series_id": 122406,
+        "state": "completed",
+        "progress_chapter": 5,
+        "progress_volume": 1,
+        "rating": 52,
+        "is_private": false,
+        "finish_date": "2024-03-03"
+      }
+    },
+    "138303": {
+      "updatedAt": 1719170186,
+      "payload": {
+        "series_id": 114206,
+        "state": "completed",
+        "progress_chapter": 34,
+        "progress_volume": 0,
+        "rating": 60,
+        "is_private": false,
+        "finish_date": "2024-03-03"
+      }
+    },
+    "146769": {
+      "updatedAt": 1719170186,
+      "payload": {
+        "series_id": 129856,
+        "state": "completed",
+        "progress_chapter": 1,
+        "progress_volume": 0,
+        "rating": 53,
+        "is_private": false,
+        "finish_date": "2024-03-03"
+      }
+    },
+    "145575": {
+      "updatedAt": 1727932190,
+      "payload": {
+        "series_id": 87088,
+        "state": "completed",
+        "progress_chapter": 85,
+        "progress_volume": 0,
+        "is_private": true,
+        "start_date": "2024-05-31",
+        "finish_date": "2024-10-03"
+      }
+    },
+    "127352": {
+      "updatedAt": 1727932203,
+      "payload": {
+        "series_id": 110874,
+        "state": "completed",
+        "progress_chapter": 60,
+        "progress_volume": 0,
+        "is_private": true,
+        "start_date": "2024-04-27",
+        "finish_date": "2024-10-03"
+      }
+    },
+    "105393": {
+      "updatedAt": 1719993484,
+      "payload": {
+        "series_id": 6364,
+        "state": "completed",
+        "progress_chapter": 268,
+        "progress_volume": 0,
+        "rating": 70,
+        "is_private": true,
+        "start_date": "2024-05-25",
+        "finish_date": "2024-06-23"
+      }
+    },
+    "111390": {
+      "updatedAt": 1719170186,
+      "payload": {
+        "series_id": 3314,
+        "state": "completed",
+        "progress_chapter": 37,
+        "progress_volume": 6,
+        "rating": 62,
+        "is_private": true,
+        "finish_date": "2024-05-25"
+      }
+    },
+    "107282": {
+      "updatedAt": 1719170186,
+      "payload": {
+        "series_id": 9636,
+        "state": "completed",
+        "progress_chapter": 203,
+        "progress_volume": 20,
+        "rating": 83,
+        "is_private": true,
+        "finish_date": "2024-05-25"
+      }
+    },
+    "104503": {
+      "updatedAt": 1777019668,
+      "payload": {
+        "series_id": 2596,
+        "state": "completed",
+        "progress_chapter": 72,
+        "progress_volume": 13,
+        "is_private": true,
+        "start_date": "2024-05-25",
+        "finish_date": "2026-04-24"
+      }
+    },
+    "119212": {
+      "updatedAt": 1730314258,
+      "payload": {
+        "series_id": 113335,
+        "state": "completed",
+        "progress_chapter": 1,
+        "progress_volume": 0,
+        "is_private": false,
+        "finish_date": "2024-10-31"
+      }
+    },
+    "165409": {
+      "updatedAt": 1730314309,
+      "payload": {
+        "series_id": 116042,
+        "state": "completed",
+        "progress_chapter": 2,
+        "progress_volume": 0,
+        "is_private": false,
+        "start_date": "2024-10-03",
+        "finish_date": "2024-10-03"
+      }
+    },
+    "73111": {
+      "updatedAt": 1740926686,
+      "payload": {
+        "series_id": 118152,
+        "state": "completed",
+        "progress_chapter": 13,
+        "progress_volume": 1,
+        "is_private": true
+      }
+    },
+    "115005": {
+      "updatedAt": 1730314925,
+      "payload": {
+        "series_id": 118880,
+        "state": "completed",
+        "progress_chapter": 6,
+        "progress_volume": 1,
+        "is_private": false,
+        "start_date": "2024-10-03",
+        "finish_date": "2024-10-03"
+      }
+    },
+    "170924": {
+      "updatedAt": 1730315253,
+      "payload": {
+        "series_id": 52837,
+        "state": "completed",
+        "progress_chapter": 16,
+        "progress_volume": 2,
+        "is_private": false,
+        "start_date": "2024-10-28",
+        "finish_date": "2024-10-28"
+      }
+    },
+    "170375": {
+      "updatedAt": 1730315513,
+      "payload": {
+        "series_id": 125118,
+        "state": "completed",
+        "progress_chapter": 1,
+        "progress_volume": 0,
+        "is_private": false,
+        "start_date": "2024-10-03",
+        "finish_date": "2024-10-03"
+      }
+    },
+    "173418": {
+      "updatedAt": 1730315595,
+      "payload": {
+        "series_id": 164348,
+        "state": "completed",
+        "progress_chapter": 1,
+        "progress_volume": 0,
+        "is_private": false,
+        "start_date": "2024-10-29",
+        "finish_date": "2024-10-29"
+      }
+    },
+    "109524": {
+      "updatedAt": 1730400182,
+      "payload": {
+        "series_id": 110999,
+        "state": "completed",
+        "progress_chapter": 8,
+        "progress_volume": 1,
+        "is_private": false,
+        "finish_date": "2024-11-01"
+      }
+    },
+    "100664": {
+      "updatedAt": 1731775182,
+      "payload": {
+        "series_id": 778,
+        "state": "completed",
+        "progress_chapter": 188,
+        "progress_volume": 20,
+        "rating": 80,
+        "is_private": false,
+        "finish_date": "2024-11-16"
+      }
+    },
+    "31133": {
+      "updatedAt": 1731775270,
+      "payload": {
+        "series_id": 1331,
+        "state": "completed",
+        "progress_chapter": 191,
+        "progress_volume": 23,
+        "rating": 90,
+        "is_private": false,
+        "finish_date": "2024-11-16"
+      }
+    },
+    "33009": {
+      "updatedAt": 1731775294,
+      "payload": {
+        "series_id": 1996,
+        "state": "completed",
+        "progress_chapter": 158,
+        "progress_volume": 17,
+        "is_private": false,
+        "finish_date": "2024-11-16"
+      }
+    },
+    "33031": {
+      "updatedAt": 1731775376,
+      "payload": {
+        "series_id": 10719,
+        "state": "completed",
+        "progress_chapter": 107,
+        "progress_volume": 24,
+        "rating": 100,
+        "is_private": false,
+        "finish_date": "2024-11-16"
+      }
+    },
+    "116186": {
+      "updatedAt": 1731775402,
+      "payload": {
+        "series_id": 7922,
+        "state": "completed",
+        "progress_chapter": 185,
+        "progress_volume": 18,
+        "rating": 100,
+        "is_private": false,
+        "finish_date": "2024-11-16"
+      }
+    },
+    "114960": {
+      "updatedAt": 1731775427,
+      "payload": {
+        "series_id": 37953,
+        "state": "completed",
+        "progress_chapter": 162,
+        "progress_volume": 18,
+        "rating": 70,
+        "is_private": false,
+        "finish_date": "2024-11-16"
+      }
+    },
+    "30936": {
+      "updatedAt": 1731775467,
+      "payload": {
+        "series_id": 9706,
+        "state": "completed",
+        "progress_chapter": 166,
+        "progress_volume": 15,
+        "rating": 100,
+        "is_private": false,
+        "finish_date": "2024-11-16"
+      }
+    },
+    "174298": {
+      "updatedAt": 1734977027,
+      "payload": {
+        "series_id": 130508,
+        "state": "completed",
+        "progress_chapter": 27,
+        "progress_volume": 4,
+        "is_private": true,
+        "start_date": "2024-11-17",
+        "finish_date": "2024-11-17"
+      }
+    },
+    "150604": {
+      "updatedAt": 1755673923,
+      "payload": {
+        "series_id": 54110,
+        "state": "completed",
+        "progress_chapter": 55,
+        "progress_volume": 0,
+        "is_private": false,
+        "start_date": "2025-04-25",
+        "finish_date": "2025-08-20"
+      }
+    },
+    "175438": {
+      "updatedAt": 1748798487,
+      "payload": {
+        "series_id": 120895,
+        "state": "completed",
+        "progress_chapter": 1,
+        "progress_volume": 0,
+        "rating": 25,
+        "is_private": true,
+        "start_date": "2025-05-21",
+        "finish_date": "2025-06-01"
+      }
+    },
+    "132729": {
+      "updatedAt": 1767295221,
+      "payload": {
+        "series_id": 114266,
+        "state": "completed",
+        "progress_chapter": 4,
+        "progress_volume": 0,
+        "is_private": true,
+        "start_date": "2025-06-06",
+        "finish_date": "2025-06-05"
+      }
+    },
+    "153358": {
+      "updatedAt": 1767293329,
+      "payload": {
+        "series_id": 120174,
+        "state": "completed",
+        "progress_chapter": 1,
+        "progress_volume": 0,
+        "is_private": true,
+        "start_date": "2025-06-06",
+        "finish_date": "2025-06-06"
+      }
+    },
+    "132440": {
+      "updatedAt": 1767294015,
+      "payload": {
+        "series_id": 124911,
+        "state": "completed",
+        "progress_chapter": 8,
+        "progress_volume": 1,
+        "is_private": true,
+        "start_date": "2025-07-03",
+        "finish_date": "2025-07-15"
+      }
+    },
+    "104058": {
+      "updatedAt": 1767294207,
+      "payload": {
+        "series_id": 112771,
+        "state": "completed",
+        "progress_chapter": 6,
+        "progress_volume": 1,
+        "is_private": true,
+        "start_date": "2025-06-05"
+      }
+    },
+    "101088": {
+      "updatedAt": 1781955318,
+      "payload": {
+        "series_id": 122983,
+        "state": "completed",
+        "progress_chapter": 45,
+        "progress_volume": 0,
+        "is_private": true,
+        "start_date": "2026-06-18",
+        "finish_date": "2026-06-20"
+      }
+    },
+    "125444": {
+      "updatedAt": 1741019492,
+      "payload": {
+        "series_id": 86009,
+        "state": "reading",
+        "progress_chapter": 0,
+        "progress_volume": 9,
+        "is_private": false,
+        "start_date": "2023-07-08"
+      }
+    },
+    "30013": {
+      "updatedAt": 1777348209,
+      "payload": {
+        "series_id": 377,
+        "state": "reading",
+        "progress_chapter": 1181,
+        "progress_volume": 114,
+        "rating": 90,
+        "is_private": false,
+        "start_date": "2023-12-18"
+      }
+    },
+    "66131": {
+      "updatedAt": 1755674218,
+      "payload": {
+        "series_id": 7662,
+        "state": "reading",
+        "progress_chapter": 76,
+        "progress_volume": 0,
+        "is_private": false,
+        "start_date": "2023-12-20"
+      }
+    },
+    "50006": {
+      "updatedAt": 1741190756,
+      "payload": {
+        "series_id": 83410,
+        "state": "reading",
+        "progress_chapter": 32,
+        "progress_volume": 5,
+        "rating": 70,
+        "is_private": false,
+        "start_date": "2023-12-20"
+      }
+    },
+    "110297": {
+      "updatedAt": 1756278657,
+      "payload": {
+        "series_id": 4600,
+        "state": "reading",
+        "progress_chapter": 92,
+        "progress_volume": 0,
+        "is_private": false,
+        "start_date": "2023-12-20"
+      }
+    },
+    "114045": {
+      "updatedAt": 1756278598,
+      "payload": {
+        "series_id": 37501,
+        "state": "reading",
+        "progress_chapter": 7,
+        "progress_volume": 0,
+        "is_private": false,
+        "start_date": "2023-12-20"
+      }
+    },
+    "167469": {
+      "updatedAt": 1755674536,
+      "payload": {
+        "series_id": 4416,
+        "state": "reading",
+        "progress_chapter": 8,
+        "progress_volume": 0,
+        "is_private": false,
+        "start_date": "2023-12-20"
+      }
+    },
+    "99026": {
+      "updatedAt": 1741190798,
+      "payload": {
+        "series_id": 84242,
+        "state": "reading",
+        "progress_chapter": 0,
+        "progress_volume": 0,
+        "is_private": false,
+        "start_date": "2023-12-25"
+      }
+    },
+    "99022": {
+      "updatedAt": 1756279210,
+      "payload": {
+        "series_id": 222,
+        "state": "reading",
+        "progress_chapter": 80,
+        "progress_volume": 0,
+        "is_private": false,
+        "start_date": "2023-12-28"
+      }
+    },
+    "109728": {
+      "updatedAt": 1742483307,
+      "payload": {
+        "series_id": 950,
+        "state": "reading",
+        "progress_chapter": 57,
+        "progress_volume": 0,
+        "is_private": false,
+        "start_date": "2024-01-03"
+      }
+    },
+    "85737": {
+      "updatedAt": 1741708727,
+      "payload": {
+        "series_id": 84926,
+        "state": "reading",
+        "progress_chapter": 38,
+        "progress_volume": 0,
+        "is_private": false,
+        "start_date": "2024-01-10"
+      }
+    },
+    "118586": {
+      "updatedAt": 1756278732,
+      "payload": {
+        "series_id": 1995,
+        "state": "reading",
+        "progress_chapter": 143,
+        "progress_volume": 0,
+        "is_private": false,
+        "start_date": "2024-01-10"
+      }
+    },
+    "93748": {
+      "updatedAt": 1755674231,
+      "payload": {
+        "series_id": 20649,
+        "state": "reading",
+        "progress_chapter": 85,
+        "progress_volume": 8,
+        "is_private": false,
+        "start_date": "2024-01-16"
+      }
+    },
+    "101177": {
+      "updatedAt": 1782929230,
+      "payload": {
+        "series_id": 477,
+        "state": "reading",
+        "progress_chapter": 351,
+        "progress_volume": 0,
+        "is_private": false,
+        "start_date": "2024-01-14"
+      }
+    },
+    "101724": {
+      "updatedAt": 1776451588,
+      "payload": {
+        "series_id": 3702,
+        "state": "reading",
+        "progress_chapter": 135,
+        "progress_volume": 0,
+        "is_private": false,
+        "start_date": "2024-01-29"
+      }
+    },
+    "96020": {
+      "updatedAt": 1741709166,
+      "payload": {
+        "series_id": 43989,
+        "state": "reading",
+        "progress_chapter": 0,
+        "progress_volume": 0,
+        "is_private": false,
+        "start_date": "2024-01-30"
+      }
+    },
+    "85564": {
+      "updatedAt": 1755674058,
+      "payload": {
+        "series_id": 84589,
+        "state": "reading",
+        "progress_chapter": 111,
+        "progress_volume": 0,
+        "is_private": false,
+        "start_date": "2024-02-05"
+      }
+    },
+    "165131": {
+      "updatedAt": 1742483853,
+      "payload": {
+        "series_id": 84588,
+        "state": "reading",
+        "progress_chapter": 0,
+        "progress_volume": 0,
+        "is_private": false
+      }
+    },
+    "97369": {
+      "updatedAt": 1741709600,
+      "payload": {
+        "series_id": 98585,
+        "state": "reading",
+        "progress_chapter": 0,
+        "progress_volume": 0,
+        "is_private": false
+      }
+    },
+    "102476": {
+      "updatedAt": 1719170186,
+      "payload": {
+        "series_id": 2066,
+        "state": "reading",
+        "progress_chapter": 0,
+        "progress_volume": 0,
+        "is_private": false,
+        "start_date": "2024-02-06"
+      }
+    },
+    "101521": {
+      "updatedAt": 1776451603,
+      "payload": {
+        "series_id": 1379,
+        "state": "reading",
+        "progress_chapter": 73,
+        "progress_volume": 11,
+        "rating": 70,
+        "is_private": false,
+        "start_date": "2024-02-09"
+      }
+    },
+    "125116": {
+      "updatedAt": 1789278099,
+      "payload": {
+        "series_id": 1737,
+        "state": "reading",
+        "progress_chapter": 52,
+        "progress_volume": 8,
+        "is_private": false,
+        "start_date": "2024-02-12"
+      }
+    },
+    "121977": {
+      "updatedAt": 1732425633,
+      "payload": {
+        "series_id": 89372,
+        "state": "reading",
+        "progress_chapter": 104,
+        "progress_volume": 0,
+        "rating": 69,
+        "is_private": true,
+        "start_date": "2024-03-02",
+        "finish_date": "2024-03-03"
+      }
+    },
+    "148491": {
+      "updatedAt": 1732425638,
+      "payload": {
+        "series_id": 91187,
+        "state": "reading",
+        "progress_chapter": 105,
+        "progress_volume": 0,
+        "rating": 69,
+        "is_private": true,
+        "start_date": "2024-03-02",
+        "finish_date": "2024-03-03"
+      }
+    },
+    "143496": {
+      "updatedAt": 1732425657,
+      "payload": {
+        "series_id": 92259,
+        "state": "reading",
+        "progress_chapter": 118,
+        "progress_volume": 0,
+        "rating": 74,
+        "is_private": true,
+        "finish_date": "2024-03-03"
+      }
+    },
+    "114832": {
+      "updatedAt": 1732425685,
+      "payload": {
+        "series_id": 110931,
+        "state": "reading",
+        "progress_chapter": 0,
+        "progress_volume": 0,
+        "rating": 49,
+        "is_private": true,
+        "finish_date": "2024-03-03"
+      }
+    },
+    "142884": {
+      "updatedAt": 1732425689,
+      "payload": {
+        "series_id": 92545,
+        "state": "reading",
+        "progress_chapter": 38,
+        "progress_volume": 0,
+        "rating": 61,
+        "is_private": true,
+        "finish_date": "2024-03-03"
+      }
+    },
+    "86399": {
+      "updatedAt": 1719170186,
+      "payload": {
+        "series_id": 2996,
+        "state": "reading",
+        "progress_chapter": 115,
+        "progress_volume": 0,
+        "is_private": true,
+        "start_date": "2024-05-24"
+      }
+    },
+    "107120": {
+      "updatedAt": 1731679001,
+      "payload": {
+        "series_id": 735,
+        "state": "reading",
+        "progress_chapter": 52,
+        "progress_volume": 0,
+        "is_private": true,
+        "start_date": "2024-05-25"
+      }
+    },
+    "99462": {
+      "updatedAt": 1756278873,
+      "payload": {
+        "series_id": 4334,
+        "state": "reading",
+        "progress_chapter": 98,
+        "progress_volume": 0,
+        "is_private": true,
+        "start_date": "2024-05-25"
+      }
+    },
+    "106758": {
+      "updatedAt": 1726762174,
+      "payload": {
+        "series_id": 3205,
+        "state": "reading",
+        "progress_chapter": 66,
+        "progress_volume": 0,
+        "is_private": true,
+        "start_date": "2024-05-25"
+      }
+    },
+    "104822": {
+      "updatedAt": 1719170186,
+      "payload": {
+        "series_id": 5849,
+        "state": "reading",
+        "progress_chapter": 103,
+        "progress_volume": 0,
+        "is_private": true,
+        "start_date": "2024-05-25"
+      }
+    },
+    "110769": {
+      "updatedAt": 1756277808,
+      "payload": {
+        "series_id": 3401,
+        "state": "reading",
+        "progress_chapter": 123,
+        "progress_volume": 0,
+        "is_private": true,
+        "start_date": "2024-05-25"
+      }
+    },
+    "98608": {
+      "updatedAt": 1756278031,
+      "payload": {
+        "series_id": 9255,
+        "state": "reading",
+        "progress_chapter": 63,
+        "progress_volume": 0,
+        "is_private": true,
+        "start_date": "2024-05-25"
+      }
+    },
+    "103238": {
+      "updatedAt": 1756278070,
+      "payload": {
+        "series_id": 4623,
+        "state": "reading",
+        "progress_chapter": 62,
+        "progress_volume": 0,
+        "is_private": true,
+        "start_date": "2024-05-25"
+      }
+    },
+    "99465": {
+      "updatedAt": 1756278853,
+      "payload": {
+        "series_id": 2201,
+        "state": "reading",
+        "progress_chapter": 106,
+        "progress_volume": 0,
+        "is_private": true,
+        "start_date": "2024-05-25"
+      }
+    },
+    "105011": {
+      "updatedAt": 1756279073,
+      "payload": {
+        "series_id": 961,
+        "state": "reading",
+        "progress_chapter": 79,
+        "progress_volume": 0,
+        "is_private": true,
+        "start_date": "2024-05-25"
+      }
+    },
+    "108556": {
+      "updatedAt": 1756279159,
+      "payload": {
+        "series_id": 1288,
+        "state": "reading",
+        "progress_chapter": 121,
+        "progress_volume": 0,
+        "is_private": true,
+        "start_date": "2024-05-25"
+      }
+    },
+    "118519": {
+      "updatedAt": 1756279221,
+      "payload": {
+        "series_id": 5574,
+        "state": "reading",
+        "progress_chapter": 23,
+        "progress_volume": 0,
+        "is_private": true
+      }
+    },
+    "177806": {
+      "updatedAt": 1719605281,
+      "payload": {
+        "series_id": 3207,
+        "state": "reading",
+        "progress_chapter": 0,
+        "progress_volume": 0,
+        "is_private": true,
+        "start_date": "2024-06-29"
+      }
+    },
+    "145498": {
+      "updatedAt": 1759344957,
+      "payload": {
+        "series_id": 90498,
+        "state": "reading",
+        "progress_chapter": 76,
+        "progress_volume": 0,
+        "is_private": true,
+        "start_date": "2024-07-03"
+      }
+    },
+    "132029": {
+      "updatedAt": 1756278066,
+      "payload": {
+        "series_id": 4627,
+        "state": "reading",
+        "progress_chapter": 207,
+        "progress_volume": 0,
+        "is_private": false
+      }
+    },
+    "187944": {
+      "updatedAt": 1745512153,
+      "payload": {
+        "series_id": 2578,
+        "state": "reading",
+        "progress_chapter": 1,
+        "progress_volume": 0,
+        "is_private": false,
+        "start_date": "2025-03-25"
+      }
+    },
+    "173633": {
+      "updatedAt": 1745507008,
+      "payload": {
+        "series_id": 3803,
+        "state": "reading",
+        "progress_chapter": 64,
+        "progress_volume": 0,
+        "is_private": false,
+        "start_date": "2025-04-24"
+      }
+    },
+    "118368": {
+      "updatedAt": 1745595948,
+      "payload": {
+        "series_id": 1596,
+        "state": "reading",
+        "progress_chapter": 1,
+        "progress_volume": 0,
+        "is_private": false,
+        "start_date": "2025-04-25"
+      }
+    },
+    "186322": {
+      "updatedAt": 1755975938,
+      "payload": {
+        "series_id": 116546,
+        "state": "reading",
+        "progress_chapter": 10,
+        "progress_volume": 0,
+        "is_private": true,
+        "start_date": "2025-07-27"
+      }
+    },
+    "85364": {
+      "updatedAt": 1760794606,
+      "payload": {
+        "series_id": 4088,
+        "state": "reading",
+        "progress_chapter": 1,
+        "progress_volume": 0,
+        "is_private": false
+      }
+    },
+    "149433": {
+      "updatedAt": 1777449534,
+      "payload": {
+        "series_id": 114737,
+        "state": "reading",
+        "progress_chapter": 1,
+        "progress_volume": 0,
+        "is_private": true,
+        "start_date": "2026-04-29"
+      }
+    },
+    "127156": {
+      "updatedAt": 1719170186,
+      "payload": {
+        "series_id": 89754,
+        "state": "plan_to_read",
+        "progress_chapter": 0,
+        "progress_volume": 0,
+        "is_private": false
+      }
+    },
+    "115166": {
+      "updatedAt": 1749484080,
+      "payload": {
+        "series_id": 86173,
+        "state": "plan_to_read",
+        "progress_chapter": 0,
+        "progress_volume": 0,
+        "is_private": false
+      }
+    },
+    "130455": {
+      "updatedAt": 1719170186,
+      "payload": {
+        "series_id": 86937,
+        "state": "plan_to_read",
+        "progress_chapter": 0,
+        "progress_volume": 0,
+        "is_private": false
+      }
+    },
+    "124090": {
+      "updatedAt": 1719170186,
+      "payload": {
+        "series_id": 113488,
+        "state": "plan_to_read",
+        "progress_chapter": 0,
+        "progress_volume": 0,
+        "is_private": false
+      }
+    },
+    "125457": {
+      "updatedAt": 1719170186,
+      "payload": {
+        "series_id": 88483,
+        "state": "plan_to_read",
+        "progress_chapter": 0,
+        "progress_volume": 0,
+        "is_private": false
+      }
+    },
+    "153839": {
+      "updatedAt": 1719170186,
+      "payload": {
+        "series_id": 120186,
+        "state": "plan_to_read",
+        "progress_chapter": 0,
+        "progress_volume": 0,
+        "is_private": false
+      }
+    },
+    "147741": {
+      "updatedAt": 1719170186,
+      "payload": {
+        "series_id": 88514,
+        "state": "plan_to_read",
+        "progress_chapter": 0,
+        "progress_volume": 0,
+        "is_private": false
+      }
+    },
+    "138625": {
+      "updatedAt": 1719170186,
+      "payload": {
+        "series_id": 48388,
+        "state": "plan_to_read",
+        "progress_chapter": 0,
+        "progress_volume": 0,
+        "is_private": false
+      }
+    },
+    "99759": {
+      "updatedAt": 1719170186,
+      "payload": {
+        "series_id": 25999,
+        "state": "plan_to_read",
+        "progress_chapter": 0,
+        "progress_volume": 0,
+        "is_private": false
+      }
+    },
+    "124025": {
+      "updatedAt": 1719170186,
+      "payload": {
+        "series_id": 9874,
+        "state": "plan_to_read",
+        "progress_chapter": 0,
+        "progress_volume": 0,
+        "is_private": false
+      }
+    },
+    "171565": {
+      "updatedAt": 1724774220,
+      "payload": {
+        "series_id": 163383,
+        "state": "plan_to_read",
+        "progress_chapter": 0,
+        "progress_volume": 0,
+        "is_private": false
+      }
+    },
+    "113076": {
+      "updatedAt": 1719170186,
+      "payload": {
+        "series_id": 967,
+        "state": "plan_to_read",
+        "progress_chapter": 0,
+        "progress_volume": 0,
+        "is_private": true
+      }
+    },
+    "151844": {
+      "updatedAt": 1726250494,
+      "payload": {
+        "series_id": 98771,
+        "state": "plan_to_read",
+        "progress_chapter": 0,
+        "progress_volume": 0,
+        "is_private": true
+      }
+    },
+    "39982": {
+      "updatedAt": 1728109951,
+      "payload": {
+        "series_id": 1518,
+        "state": "plan_to_read",
+        "progress_chapter": 0,
+        "progress_volume": 0,
+        "is_private": false
+      }
+    },
+    "159336": {
+      "updatedAt": 1729178278,
+      "payload": {
+        "series_id": 115228,
+        "state": "plan_to_read",
+        "progress_chapter": 0,
+        "progress_volume": 0,
+        "is_private": true
+      }
+    },
+    "114608": {
+      "updatedAt": 1742483125,
+      "payload": {
+        "series_id": 113240,
+        "state": "paused",
+        "progress_chapter": 105,
+        "progress_volume": 0,
+        "rating": 70,
+        "is_private": false,
+        "start_date": "2024-03-03",
+        "finish_date": "2024-03-03"
+      }
+    }
+  },
+  "last_sync_timestamp": 1789662292
+}
