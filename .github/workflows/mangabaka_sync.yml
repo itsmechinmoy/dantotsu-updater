@@ -2,234 +2,48 @@ name: Sync AniList to MangaBaka
 
 on:
   schedule:
+    # Run every 6 hours
     - cron: '0 */6 * * *'
-  workflow_dispatch:
+  workflow_dispatch: # Allows manual trigger from GitHub UI
+
+permissions:
+  contents: write # Needed to commit cache updates & upload artifacts
 
 jobs:
   sync:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          node-version: '20'
-      
-      - name: Install Puppeteer and dependencies
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
         run: |
-          npm install puppeteer
-          sudo apt-get update
-          sudo apt-get install -y \
-            ca-certificates \
-            fonts-liberation \
-            libasound2t64 \
-            libatk-bridge2.0-0 \
-            libatk1.0-0 \
-            libc6 \
-            libcairo2 \
-            libcups2 \
-            libdbus-1-3 \
-            libexpat1 \
-            libfontconfig1 \
-            libgbm1 \
-            libgcc-s1 \
-            libglib2.0-0 \
-            libgtk-3-0 \
-            libnspr4 \
-            libnss3 \
-            libpango-1.0-0 \
-            libpangocairo-1.0-0 \
-            libstdc++6 \
-            libx11-6 \
-            libx11-xcb1 \
-            libxcb1 \
-            libxcomposite1 \
-            libxcursor1 \
-            libxdamage1 \
-            libxext6 \
-            libxfixes3 \
-            libxi6 \
-            libxrandr2 \
-            libxrender1 \
-            libxss1 \
-            libxtst6 \
-            lsb-release \
-            wget \
-            xdg-utils
+          pip install -r requirements.txt
 
-      - name: Create browser automation script
-        run: |
-          cat > mangabaka_auth.js << 'EOF'
-          const puppeteer = require('puppeteer');
-          const fs = require('fs');
-          
-          (async () => {
-            console.log('Launching browser...');
-            const browser = await puppeteer.launch({
-              headless: 'new',
-              args: [
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage',
-                '--disable-accelerated-2d-canvas',
-                '--disable-gpu',
-                '--window-size=1920,1080'
-              ]
-            });
-            
-            const page = await browser.newPage();
-            
-            // Set realistic user agent
-            await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
-            await page.setViewport({ width: 1920, height: 1080 });
-            
-            try {
-              console.log('Navigating to MangaBaka...');
-              await page.goto('https://mangabaka.org/', {
-                waitUntil: 'networkidle2',
-                timeout: 60000
-              });
-              
-              console.log('Waiting for page to load...');
-              await new Promise(resolve => setTimeout(resolve, 10000));
-              
-              // Navigate to import page to ensure auth is triggered
-              console.log('Navigating to import page...');
-              await page.goto('https://mangabaka.org/my/library/import/anilist', {
-                waitUntil: 'networkidle2',
-                timeout: 60000
-              });
-              
-              await new Promise(resolve => setTimeout(resolve, 5000));
-              
-              // Get all cookies
-              const cookies = await page.cookies();
-              
-              const sessionCookie = cookies.find(c => c.name === '__Secure-better-auth.session_token');
-              const cfCookie = cookies.find(c => c.name === 'cf_clearance');
-              
-              if (sessionCookie && cfCookie) {
-                console.log('✅ Successfully obtained cookies!');
-                
-                // Write to GitHub output file
-                fs.appendFileSync(process.env.GITHUB_OUTPUT, `session_token=${sessionCookie.value}\n`);
-                fs.appendFileSync(process.env.GITHUB_OUTPUT, `cf_clearance=${cfCookie.value}\n`);
-                
-                // Also save to file for debugging
-                fs.writeFileSync('mangabaka_cookies.json', JSON.stringify({
-                  session_token: sessionCookie.value,
-                  cf_clearance: cfCookie.value,
-                  fetched_at: new Date().toISOString()
-                }, null, 2));
-                
-                console.log('Cookies saved to GITHUB_OUTPUT');
-              } else {
-                console.error('❌ Failed to get required cookies');
-                if (!sessionCookie) console.error('Missing __Secure-better-auth.session_token');
-                if (!cfCookie) console.error('Missing cf_clearance');
-                
-                // Save all cookies for debugging
-                fs.writeFileSync('debug_cookies.json', JSON.stringify(cookies, null, 2));
-                process.exit(1);
-              }
-              
-            } catch (error) {
-              console.error('Error:', error.message);
-              await page.screenshot({ path: 'error_screenshot.png', fullPage: true });
-              console.log('Saved error screenshot');
-              process.exit(1);
-            } finally {
-              await browser.close();
-            }
-          })();
-          EOF
+      - name: Run sync script
+        env:
+          ANILIST_USERNAME: "itsmechinmoy"
+          ANILIST_TOKEN: ${{ secrets.ANILIST_TOKEN }}
+          MANGABAKA_API_KEY: ${{ secrets.MANGABAKA_API_KEY }}
+        run: python sync.py
 
-      - name: Run browser automation
-        id: get_cookies
-        run: node mangabaka_auth.js
-        continue-on-error: true
-
-      - name: Check if automation succeeded
-        id: check_cookies
-        run: |
-          if [ -n "${{ steps.get_cookies.outputs.session_token }}" ]; then
-            echo "cookies_obtained=true" >> $GITHUB_OUTPUT
-            echo "✅ Automation succeeded!"
-          else
-            echo "cookies_obtained=false" >> $GITHUB_OUTPUT
-            echo "⚠️ Automation failed - trying fallback..."
-          fi
-
-      - name: Fallback - Use GitHub Secrets
-        if: steps.check_cookies.outputs.cookies_obtained == 'false'
-        run: |
-          echo "Using secrets as fallback..."
-          echo "session_token=${{ secrets.MANGABAKA_SESSION }}" >> $GITHUB_OUTPUT
-          echo "cf_clearance=${{ secrets.MANGABAKA_CF_CLEARANCE }}" >> $GITHUB_OUTPUT
-        id: fallback
-
-      - name: Fetch AniList manga list
-        id: fetch
-        run: |
-          RESPONSE=$(curl -s -X POST https://graphql.anilist.co \
-            -H "Content-Type: application/json" \
-            --data '{
-              "query": "query($userName: String){MediaListCollection(userName: $userName, type: MANGA){lists{entries{mediaId status score(format: POINT_100) progress progressVolumes startedAt{year month day} completedAt{year month day} repeat notes private}}}}",
-              "variables": {"userName": "itsmechinmoy"}
-            }')
-          echo "ANILIST_DATA=$RESPONSE" >> $GITHUB_ENV
-
-      - name: Import to MangaBaka
-        run: |
-          SESSION_TOKEN="${{ steps.get_cookies.outputs.session_token || steps.fallback.outputs.session_token }}"
-          CF_CLEARANCE="${{ steps.get_cookies.outputs.cf_clearance || steps.fallback.outputs.cf_clearance }}"
-          
-          if [ -z "$SESSION_TOKEN" ] || [ -z "$CF_CLEARANCE" ]; then
-            echo "❌ Missing required cookies!"
-            exit 1
-          fi
-          
-          echo "Session token: ${SESSION_TOKEN:0:20}..."
-          echo "CF clearance: ${CF_CLEARANCE:0:20}..."
-          
-          # Create proper payload for MangaBaka import
-          # Extract media IDs from AniList data
-          MEDIA_IDS=$(echo '${{ env.ANILIST_DATA }}' | jq -r '.data.MediaListCollection.lists[].entries[].mediaId' | head -100 | jq -R -s -c 'split("\n") | map(select(. != "")) | map(tonumber)')
-          
-          echo "Found $(echo $MEDIA_IDS | jq 'length') manga entries"
-          
-          # This is the actual payload format MangaBaka expects
-          PAYLOAD=$(jq -n --argjson ids "$MEDIA_IDS" '{"payload": ($ids | map([.])), "refreshes": []}')
-          
-          curl -s -X POST "https://mangabaka.org/_app/remote/15bgtxk/importLibraryCommand" \
-            -H "Content-Type: application/json" \
-            -H "Origin: https://mangabaka.org" \
-            -H "Referer: https://mangabaka.org/my/library/import/anilist" \
-            -H "x-sveltekit-pathname: /my/library/import/anilist" \
-            -H "x-sveltekit-search: " \
-            -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0" \
-            -b "__Secure-better-auth.session_token=$SESSION_TOKEN; cf_clearance=$CF_CLEARANCE; content_rating=safe,pornographic; show_discord_banner=no" \
-            --data "$PAYLOAD" | jq '.'
-          
-          echo "Import completed"
-
-      - name: Update secrets with new cookies (if automation succeeded)
-        if: steps.check_cookies.outputs.cookies_obtained == 'true' && github.event_name != 'schedule'
-        run: |
-          echo "⚠️ New cookies obtained but GitHub Actions cannot update secrets automatically for security reasons."
-          echo "Please manually update these secrets in your repository settings:"
-          echo "  MANGABAKA_SESSION: ${{ steps.get_cookies.outputs.session_token }}"
-          echo "  MANGABAKA_CF_CLEARANCE: ${{ steps.get_cookies.outputs.cf_clearance }}"
-
-      - name: Upload artifacts for debugging
-        if: always()
+      - name: Upload mapping artifact (90 days retention)
         uses: actions/upload-artifact@v4
         with:
-          name: mangabaka-debug
-          path: |
-            *.json
-            *.png
-          retention-days: 1
+          name: anilist-mangabaka-mappings
+          path: mapping_cache.json
+          retention-days: 90
+
+      - name: Commit and push updated mappings
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add mapping_cache.json
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Update AniList-MangaBaka mappings [skip ci]" && git push)
