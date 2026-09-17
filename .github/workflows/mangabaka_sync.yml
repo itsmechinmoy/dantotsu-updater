@@ -2,12 +2,17 @@ name: Sync AniList to MangaBaka
 
 on:
   schedule:
-    # Run every 6 hours
     - cron: '0 */6 * * *'
-  workflow_dispatch: # Allows manual trigger from GitHub UI
+  workflow_dispatch:
+    inputs:
+      force_full_sync:
+        description: 'Force full sync of all entries (ignore change detection)'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
-  contents: write # Needed to commit cache updates & upload artifacts
+  contents: write
 
 jobs:
   sync:
@@ -32,18 +37,21 @@ jobs:
           ANILIST_USERNAME: "itsmechinmoy"
           ANILIST_TOKEN: ${{ secrets.ANILIST_TOKEN }}
           MANGABAKA_API_KEY: ${{ secrets.MANGABAKA_API_KEY }}
+          FORCE_FULL_SYNC: ${{ github.event.inputs.force_full_sync || 'false' }}
         run: python scripts/mangabaka-sync.py
 
-      - name: Upload mapping artifact (90 days retention)
+      - name: Upload mapping & state artifacts (90 days retention)
         uses: actions/upload-artifact@v4
         with:
-          name: anilist-mangabaka-mappings
-          path: mapping_cache.json
+          name: anilist-mangabaka-data
+          path: |
+            mapping_cache.json
+            sync_state.json
           retention-days: 90
 
-      - name: Commit and push updated mappings
+      - name: Commit and push updated mappings and state
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add mapping_cache.json
-          git diff --quiet && git diff --staged --quiet || (git commit -m "Update AniList-MangaBaka mappings [skip ci]" && git push)
+          git add mapping_cache.json sync_state.json
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Update AniList-MangaBaka state [skip ci]" && git push)
