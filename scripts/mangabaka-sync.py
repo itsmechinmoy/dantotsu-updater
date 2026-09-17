@@ -8,7 +8,10 @@ import requests
 ANILIST_USERNAME = os.environ.get("ANILIST_USERNAME", "itsmechinmoy")
 ANILIST_TOKEN = os.environ.get("ANILIST_TOKEN", "").strip()
 MANGABAKA_KEY = os.environ.get("MANGABAKA_API_KEY", "").strip()
+FORCE_FULL_SYNC = os.environ.get("FORCE_FULL_SYNC", "false").lower() in ("true", "1", "yes")
+
 CACHE_FILE = "mapping_cache.json"
+STATE_FILE = "sync_state.json"
 
 MB_BASE = "https://api.mangabaka.org"
 AL_BASE = "https://graphql.anilist.co"
@@ -22,21 +25,21 @@ STATUS_MAP = {
     "REPEATING": "rereading"
 }
 
-def load_cache():
-    if os.path.exists(CACHE_FILE):
+def load_json(filepath):
+    if os.path.exists(filepath):
         try:
-            with open(CACHE_FILE, "r", encoding="utf-8") as f:
+            with open(filepath, "r", encoding="utf-8") as f:
                 return json.load(f)
         except Exception as e:
-            print(f"Warning: Failed to load cache: {e}")
+            print(f"Warning: Failed to load {filepath}: {e}")
     return {}
 
-def save_cache(cache):
+def save_json(filepath, data):
     try:
-        with open(CACHE_FILE, "w", encoding="utf-8") as f:
-            json.dump(cache, f, indent=2)
+        with open(filepath, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2)
     except Exception as e:
-        print(f"Warning: Failed to save cache: {e}")
+        print(f"Warning: Failed to save {filepath}: {e}")
 
 def format_date(d):
     if not d or not d.get("year"):
@@ -61,6 +64,7 @@ def fetch_anilist_entries():
             score(format: POINT_100)
             private
             notes
+            updatedAt
             startedAt { year month day }
             completedAt { year month day }
             media {
@@ -78,7 +82,7 @@ def fetch_anilist_entries():
     headers = {"Content-Type": "application/json"}
     if ANILIST_TOKEN:
         headers["Authorization"] = f"Bearer {ANILIST_TOKEN}"
-        print("Using AniList Bearer token for authenticated access (private lists included).")
+        print("Using AniList token for authenticated access (private lists included).")
 
     res = requests.post(AL_BASE, headers=headers, json={
         "query": query,
@@ -146,9 +150,9 @@ def lookup_mangabaka(session, entry, cache):
     return None
 
 def resolve_all_ids(entries, cache):
-    to_resolve = [e for e in entries if str(e["mediaId"]) not in cache or cache[str(e["mediaId"])] is None]
+    to_resolve = [e for e in entries if str(e["mediaId"]) not in cache]
     cached_count = len(entries) - len(to_resolve)
-    print(f"{cached_count} entries already in cache; {len(to_resolve)} to resolve...")
+    print(f"{cached_count} entries already in mapping cache; {len(to_resolve)} new lookups needed.")
 
     if to_resolve:
         with requests.Session() as s:
@@ -159,12 +163,12 @@ def resolve_all_ids(entries, cache):
                     count += 1
                     if count % 50 == 0 or count == len(to_resolve):
                         print(f"Resolved {count}/{len(to_resolve)} lookups...")
-        save_cache(cache)
+        save_json(CACHE_FILE, cache)
 
 def push_batches(mb_entries):
     if not MANGABAKA_KEY:
         print("MANGABAKA_API_KEY not set. Skipping push to MangaBaka (dry run).")
-        return
+        return True
 
     headers = {
         "x-api-key": MANGABAKA_KEY,
@@ -172,7 +176,8 @@ def push_batches(mb_entries):
     }
 
     total = len(mb_entries)
-    print(f"Pushing {total} entries to MangaBaka in batches of up to 100...")
+    print(f"Pushing {total} updated entries to MangaBaka in batches of up to 100...")
+    all_success = True
 
     for i in range(0, total, 100):
         chunk = mb_entries[i:i + 100]
@@ -183,7 +188,7 @@ def push_batches(mb_entries):
             print(f"Batch {i // 100 + 1}/{(total - 1) // 100 + 1}: OK (HTTP 200)")
         else:
             print(f"Batch {i // 100 + 1} rejected (HTTP {res.status_code}): {res.text}")
-            print("Falling back to single updates for this batch to isolate failures...")
+            print("Falling back to single updates for this batch...")
             for item in chunk:
                 single_url = f"{MB_BASE}/v1/my/library/{item['series_id']}"
                 sr = requests.post(single_url, headers=headers, json=item, timeout=15)
@@ -191,14 +196,21 @@ def push_batches(mb_entries):
                     sr = requests.put(single_url, headers=headers, json=item, timeout=15)
                 if sr.status_code not in (200, 201):
                     print(f"  Series {item['series_id']} failed: {sr.status_code} - {sr.text}")
+                    all_success = False
+
+    return all_success
 
 def main():
-    cache = load_cache()
+    cache = load_json(CACHE_FILE)
+    state = load_json(STATE_FILE)
+    synced_entries = state.get("entries", {})
+
     entries = fetch_anilist_entries()
     resolve_all_ids(entries, cache)
 
     mb_payload = []
     unmapped = 0
+    updated_state = dict(synced_entries)
 
     for entry in entries:
         mid = entry["mediaId"]
@@ -219,10 +231,41 @@ def main():
             "finish_date": format_date(entry.get("completedAt")),
         }
         clean_item = {k: v for k, v in item.items() if v is not None}
-        mb_payload.append(clean_item)
 
-    print(f"Ready to sync: {len(mb_payload)} entries ({unmapped} unmapped on MangaBaka).")
-    push_batches(mb_payload)
+        # Change detection
+        al_updated_at = entry.get("updatedAt", 0)
+        cached_info = synced_entries.get(str(mid))
+
+        has_changed = False
+        if FORCE_FULL_SYNC:
+            has_changed = True
+        elif cached_info is None:
+            has_changed = True
+        elif cached_info.get("updatedAt") != al_updated_at:
+            has_changed = True
+        elif cached_info.get("payload") != clean_item:
+            has_changed = True
+
+        if has_changed:
+            mb_payload.append(clean_item)
+            updated_state[str(mid)] = {
+                "updatedAt": al_updated_at,
+                "payload": clean_item
+            }
+
+    print(f"Change detection: {len(mb_payload)} entries changed/new out of {len(entries) - unmapped} mapped titles.")
+
+    if not mb_payload:
+        print("Everything is already up-to-date with MangaBaka. No API requests needed!")
+        return
+
+    success = push_batches(mb_payload)
+    if success:
+        state["entries"] = updated_state
+        state["last_sync_timestamp"] = int(time.time())
+        save_json(STATE_FILE, state)
+        print("Updated sync_state.json successfully.")
+
     print("Sync process completed!")
 
 if __name__ == "__main__":
