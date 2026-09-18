@@ -1859,11 +1859,11 @@
       }
     },
     "125116": {
-      "updatedAt": 1789278099,
+      "updatedAt": 1789748374,
       "payload": {
         "series_id": 1737,
         "state": "reading",
-        "progress_chapter": 52,
+        "progress_chapter": 54,
         "progress_volume": 8,
         "is_private": false,
         "start_date": "2024-02-12"
@@ -2323,5 +2323,5 @@
       }
     }
   },
-  "last_sync_timestamp": 1789748298
+  "last_sync_timestamp": 1789748427
 }
