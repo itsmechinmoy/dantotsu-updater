@@ -1160,16 +1160,15 @@
       }
     },
     "106260": {
-      "updatedAt": 1789750269,
+      "updatedAt": 1789843894,
       "payload": {
         "series_id": 92430,
-        "state": "completed",
-        "progress_chapter": 52,
+        "state": "reading",
+        "progress_chapter": 9,
         "progress_volume": 0,
         "rating": 67,
-        "is_private": false,
-        "start_date": "2024-03-02",
-        "finish_date": "2024-03-03"
+        "is_private": true,
+        "start_date": "2026-09-19"
       }
     },
     "150321": {
@@ -2323,5 +2322,5 @@
       }
     }
   },
-  "last_sync_timestamp": 1789762825
+  "last_sync_timestamp": 1789847962
 }
