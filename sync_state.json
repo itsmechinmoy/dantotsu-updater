@@ -2395,7 +2395,7 @@
     "95409": {
       "updatedAt": 1719170186,
       "payload": {
-        "series_id": 85182,
+        "series_id": 23516,
         "state": "completed",
         "progress_chapter": 10,
         "progress_volume": 2,
@@ -2795,7 +2795,7 @@
     "102475": {
       "updatedAt": 1742483047,
       "payload": {
-        "series_id": 2066,
+        "series_id": 83036,
         "state": "completed",
         "progress_chapter": 175,
         "progress_volume": 11,
@@ -3043,7 +3043,7 @@
     "63005": {
       "updatedAt": 1740926224,
       "payload": {
-        "series_id": 4928,
+        "series_id": 83407,
         "state": "completed",
         "progress_chapter": 26,
         "progress_volume": 5,
@@ -4699,7 +4699,7 @@
     "130181": {
       "updatedAt": 1789750269,
       "payload": {
-        "series_id": 110866,
+        "series_id": 44825,
         "state": "completed",
         "progress_chapter": 23,
         "progress_volume": 0,
@@ -6350,7 +6350,7 @@
     "100461": {
       "updatedAt": 1741708354,
       "payload": {
-        "series_id": 320,
+        "series_id": 101217,
         "state": "reading",
         "progress_chapter": 50,
         "progress_volume": 0,
@@ -6673,7 +6673,7 @@
     "125198": {
       "updatedAt": 1789750269,
       "payload": {
-        "series_id": 2818,
+        "series_id": 85422,
         "state": "reading",
         "progress_chapter": 97,
         "progress_volume": 0,
@@ -6957,7 +6957,7 @@
     "30026": {
       "updatedAt": 1789750269,
       "payload": {
-        "series_id": 566044,
+        "series_id": 677,
         "state": "reading",
         "progress_chapter": 410,
         "progress_volume": 0,
@@ -7514,7 +7514,17 @@
         "progress_volume": 0,
         "is_private": false
       }
+    },
+    "156310": {
+      "updatedAt": 1719170186,
+      "payload": {
+        "series_id": 91751,
+        "state": "plan_to_read",
+        "progress_chapter": 0,
+        "progress_volume": 0,
+        "is_private": false
+      }
     }
   },
-  "last_sync_timestamp": 1790958546
+  "last_sync_timestamp": 1790959039
 }
