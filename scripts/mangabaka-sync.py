@@ -73,6 +73,7 @@ def fetch_anilist_entries():
                 romaji
                 english
               }
+              synonyms
             }
           }
         }
@@ -113,7 +114,7 @@ def lookup_mangabaka(session, entry, cache):
     # 1. Try direct AniList ID source lookup
     try:
         url = f"{MB_BASE}/v1/source/anilist/{anilist_id}"
-        r = session.get(url, params={"with_series": 1}, timeout=15)
+        r = session.get(url, params={"with_series": 1}, timeout=10)
         if r.status_code == 200:
             series_list = r.json().get("data", {}).get("series", [])
             if series_list:
@@ -124,21 +125,27 @@ def lookup_mangabaka(session, entry, cache):
     except Exception:
         pass
 
-    # 2. Fallback: Search by title (English, Romaji, userPreferred)
+    # 2. Try titles: english, userPreferred, romaji + all synonyms
     media_info = entry.get("media", {})
-    titles_to_try = []
     title_obj = media_info.get("title", {})
+    synonyms = media_info.get("synonyms") or []
+
+    candidate_titles = []
     for t_key in ["english", "userPreferred", "romaji"]:
         val = title_obj.get(t_key)
-        if val and val not in titles_to_try:
-            titles_to_try.append(val)
+        if val and val.strip() and val.strip() not in candidate_titles:
+            candidate_titles.append(val.strip())
+    for s_val in synonyms:
+        if s_val and s_val.strip() and s_val.strip() not in candidate_titles:
+            candidate_titles.append(s_val.strip())
 
-    for title in titles_to_try:
+    for title in candidate_titles:
+        # Exact/compact match
         try:
-            r = session.get(f"{MB_BASE}/v1/series/match", params={"q": title}, timeout=15)
+            r = session.get(f"{MB_BASE}/v1/series/match", params={"q": title}, timeout=10)
             if r.status_code == 200:
                 results = r.json().get("data", [])
-                if results and isinstance(results, list):
+                if isinstance(results, list) and len(results) > 0:
                     s = results[0]
                     mb_id = s.get("merged_with") if s.get("state") == "merged" else s.get("id")
                     cache[key] = mb_id
@@ -146,13 +153,33 @@ def lookup_mangabaka(session, entry, cache):
         except Exception:
             pass
 
+        # Search fallback
+        try:
+            r = session.get(f"{MB_BASE}/v1/series/search", params={"q": title}, timeout=10)
+            if r.status_code == 200:
+                results = r.json().get("data", [])
+                if isinstance(results, list) and len(results) > 0:
+                    for s in results:
+                        if s.get("title", "").strip().lower() == title.lower():
+                            mb_id = s.get("merged_with") if s.get("state") == "merged" else s.get("id")
+                            cache[key] = mb_id
+                            return mb_id
+        except Exception:
+            pass
+
     cache[key] = None
     return None
 
-def resolve_all_ids(entries, cache):
-    to_resolve = [e for e in entries if str(e["mediaId"]) not in cache]
+def resolve_all_ids(entries, cache, force_full=False):
+    if force_full:
+        unmapped_keys = [k for k, v in cache.items() if v is None]
+        for k in unmapped_keys:
+            del cache[k]
+        print(f"Force full sync: wiped {len(unmapped_keys)} unmapped entries from cache to re-evaluate.")
+
+    to_resolve = [e for e in entries if str(e["mediaId"]) not in cache or cache[str(e["mediaId"])] is None]
     cached_count = len(entries) - len(to_resolve)
-    print(f"{cached_count} entries already in mapping cache; {len(to_resolve)} new lookups needed.")
+    print(f"{cached_count} entries already mapped; {len(to_resolve)} to resolve with MangaBaka...")
 
     if to_resolve:
         with requests.Session() as s:
@@ -206,18 +233,36 @@ def main():
     synced_entries = state.get("entries", {})
 
     entries = fetch_anilist_entries()
-    resolve_all_ids(entries, cache)
+
+    # Automatically purge cached 'None' for any entry that had activity on AniList
+    for entry in entries:
+        mid = str(entry["mediaId"])
+        al_updated_at = entry.get("updatedAt", 0)
+        cached_info = synced_entries.get(mid)
+        if cache.get(mid) is None and (cached_info is None or al_updated_at > cached_info.get("updatedAt", 0)):
+            if mid in cache:
+                del cache[mid]
+
+    resolve_all_ids(entries, cache, force_full=FORCE_FULL_SYNC)
 
     mb_payload = []
-    unmapped = 0
+    unmapped_updated = []
     updated_state = dict(synced_entries)
+    mapped_count = 0
 
     for entry in entries:
-        mid = entry["mediaId"]
-        mb_id = cache.get(str(mid))
+        mid = str(entry["mediaId"])
+        mb_id = cache.get(mid)
+        al_updated_at = entry.get("updatedAt", 0)
+        cached_info = synced_entries.get(mid)
+        title = entry.get("media", {}).get("title", {}).get("userPreferred") or f"ID {mid}"
+
         if not mb_id:
-            unmapped += 1
+            if cached_info and al_updated_at > cached_info.get("updatedAt", 0):
+                unmapped_updated.append(f"{title} (AL ID: {mid})")
             continue
+
+        mapped_count += 1
 
         item = {
             "series_id": mb_id,
@@ -233,9 +278,6 @@ def main():
         clean_item = {k: v for k, v in item.items() if v is not None}
 
         # Change detection
-        al_updated_at = entry.get("updatedAt", 0)
-        cached_info = synced_entries.get(str(mid))
-
         has_changed = False
         if FORCE_FULL_SYNC:
             has_changed = True
@@ -248,12 +290,18 @@ def main():
 
         if has_changed:
             mb_payload.append(clean_item)
-            updated_state[str(mid)] = {
+            updated_state[mid] = {
                 "updatedAt": al_updated_at,
                 "payload": clean_item
             }
 
-    print(f"Change detection: {len(mb_payload)} entries changed/new out of {len(entries) - unmapped} mapped titles.")
+    print(f"\nLibrary Status: {mapped_count} mapped titles out of {len(entries)} AniList entries.")
+    if unmapped_updated:
+        print(f"Note: {len(unmapped_updated)} updated AniList titles could not be synced because they are not yet indexed on MangaBaka:")
+        for t in unmapped_updated[:5]:
+            print(f"  - {t}")
+
+    print(f"Change detection: {len(mb_payload)} entries changed/new.")
 
     if not mb_payload:
         print("Everything is already up-to-date with MangaBaka. No API requests needed!")
