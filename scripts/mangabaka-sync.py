@@ -70,10 +70,7 @@ def fetch_anilist_entries():
             media {
               title {
                 userPreferred
-                romaji
-                english
               }
-              synonyms
             }
           }
         }
@@ -105,91 +102,41 @@ def fetch_anilist_entries():
     print(f"Retrieved {len(all_entries)} unique manga entries from AniList.")
     return list(all_entries.values())
 
-def lookup_mangabaka(session, entry, cache):
-    anilist_id = entry["mediaId"]
-    key = str(anilist_id)
-    if key in cache and cache[key] is not None:
-        return cache[key]
-
-    # 1. Try direct AniList ID source lookup
+def lookup_mangabaka_strict_id(session, anilist_id):
+    """Strictly matches MangaBaka using only the direct AniList source ID."""
+    url = f"{MB_BASE}/v1/source/anilist/{anilist_id}"
     try:
-        url = f"{MB_BASE}/v1/source/anilist/{anilist_id}"
         r = session.get(url, params={"with_series": 1}, timeout=10)
         if r.status_code == 200:
             series_list = r.json().get("data", {}).get("series", [])
             if series_list:
                 s = series_list[0]
-                mb_id = s.get("merged_with") if s.get("state") == "merged" else s.get("id")
-                cache[key] = mb_id
-                return mb_id
+                return s.get("merged_with") if s.get("state") == "merged" else s.get("id")
     except Exception:
         pass
-
-    # 2. Try titles: english, userPreferred, romaji + all synonyms
-    media_info = entry.get("media", {})
-    title_obj = media_info.get("title", {})
-    synonyms = media_info.get("synonyms") or []
-
-    candidate_titles = []
-    for t_key in ["english", "userPreferred", "romaji"]:
-        val = title_obj.get(t_key)
-        if val and val.strip() and val.strip() not in candidate_titles:
-            candidate_titles.append(val.strip())
-    for s_val in synonyms:
-        if s_val and s_val.strip() and s_val.strip() not in candidate_titles:
-            candidate_titles.append(s_val.strip())
-
-    for title in candidate_titles:
-        # Exact/compact match
-        try:
-            r = session.get(f"{MB_BASE}/v1/series/match", params={"q": title}, timeout=10)
-            if r.status_code == 200:
-                results = r.json().get("data", [])
-                if isinstance(results, list) and len(results) > 0:
-                    s = results[0]
-                    mb_id = s.get("merged_with") if s.get("state") == "merged" else s.get("id")
-                    cache[key] = mb_id
-                    return mb_id
-        except Exception:
-            pass
-
-        # Search fallback
-        try:
-            r = session.get(f"{MB_BASE}/v1/series/search", params={"q": title}, timeout=10)
-            if r.status_code == 200:
-                results = r.json().get("data", [])
-                if isinstance(results, list) and len(results) > 0:
-                    for s in results:
-                        if s.get("title", "").strip().lower() == title.lower():
-                            mb_id = s.get("merged_with") if s.get("state") == "merged" else s.get("id")
-                            cache[key] = mb_id
-                            return mb_id
-        except Exception:
-            pass
-
-    cache[key] = None
     return None
 
 def resolve_all_ids(entries, cache, force_full=False):
     if force_full:
-        unmapped_keys = [k for k, v in cache.items() if v is None]
-        for k in unmapped_keys:
-            del cache[k]
-        print(f"Force full sync: wiped {len(unmapped_keys)} unmapped entries from cache to re-evaluate.")
+        cache.clear()
+        print("Force full sync: clearing mapping cache to re-verify strictly by AniList ID.")
 
-    to_resolve = [e for e in entries if str(e["mediaId"]) not in cache or cache[str(e["mediaId"])] is None]
+    to_resolve = [e["mediaId"] for e in entries if str(e["mediaId"]) not in cache]
     cached_count = len(entries) - len(to_resolve)
-    print(f"{cached_count} entries already mapped; {len(to_resolve)} to resolve with MangaBaka...")
+    print(f"{cached_count} entries already checked in cache; {len(to_resolve)} to check with MangaBaka...")
 
     if to_resolve:
         with requests.Session() as s:
             with ThreadPoolExecutor(max_workers=8) as executor:
-                futures = {executor.submit(lookup_mangabaka, s, e, cache): e for e in to_resolve}
+                futures = {executor.submit(lookup_mangabaka_strict_id, s, mid): mid for mid in to_resolve}
                 count = 0
                 for f in as_completed(futures):
+                    mid = futures[f]
+                    mb_id = f.result()
+                    cache[str(mid)] = mb_id
                     count += 1
                     if count % 50 == 0 or count == len(to_resolve):
-                        print(f"Resolved {count}/{len(to_resolve)} lookups...")
+                        print(f"Checked {count}/{len(to_resolve)} AniList IDs with MangaBaka...")
         save_json(CACHE_FILE, cache)
 
 def push_batches(mb_entries):
@@ -219,7 +166,6 @@ def push_batches(mb_entries):
             for item in chunk:
                 sid = item["series_id"]
                 single_url = f"{MB_BASE}/v1/my/library/{sid}"
-                # series_id is in URL path; remove from JSON body to satisfy schema
                 body = {k: v for k, v in item.items() if k != "series_id"}
                 sr = requests.post(single_url, headers=headers, json=body, timeout=15)
                 if sr.status_code not in (200, 201):
@@ -237,7 +183,7 @@ def main():
 
     entries = fetch_anilist_entries()
 
-    # Automatically purge cached 'None' for any entry that had activity on AniList
+    # If an entry is unmapped (None) but had updates on AniList, re-check AniList ID in case MangaBaka linked it
     for entry in entries:
         mid = str(entry["mediaId"])
         al_updated_at = entry.get("updatedAt", 0)
@@ -298,27 +244,26 @@ def main():
                 "payload": clean_item
             }
 
-    # Deduplicate mb_payload by series_id so MangaBaka batch API never sees duplicate series_id
+    # Deduplicate payload by series_id so MangaBaka batch API never encounters duplicates
     deduped_payload = {}
     for item in mb_payload_raw:
         sid = item["series_id"]
         if sid not in deduped_payload:
             deduped_payload[sid] = item
         else:
-            # Keep the one with greater chapter progress
             existing = deduped_payload[sid]
             if (item.get("progress_chapter") or 0) >= (existing.get("progress_chapter") or 0):
                 deduped_payload[sid] = item
-    
+
     mb_payload = list(deduped_payload.values())
 
-    print(f"\nLibrary Status: {mapped_count} mapped titles out of {len(entries)} AniList entries.")
+    print(f"\nLibrary Status (Strict AniList ID Mode): {mapped_count} strictly verified titles out of {len(entries)} AniList entries.")
     if unmapped_updated:
-        print(f"Note: {len(unmapped_updated)} updated AniList titles could not be synced because they are not yet indexed on MangaBaka:")
+        print(f"Note: {len(unmapped_updated)} updated titles skipped (no AniList ID link on MangaBaka yet):")
         for t in unmapped_updated[:5]:
             print(f"  - {t}")
 
-    print(f"Change detection: {len(mb_payload)} entries changed/new (after deduplicating series IDs).")
+    print(f"Change detection: {len(mb_payload)} entries changed/new.")
 
     if not mb_payload:
         print("Everything is already up-to-date with MangaBaka. No API requests needed!")
