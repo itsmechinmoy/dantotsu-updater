@@ -7524,7 +7524,75 @@
         "progress_volume": 0,
         "is_private": false
       }
+    },
+    "97249": {
+      "updatedAt": 1741709547,
+      "payload": {
+        "series_id": 99867,
+        "state": "completed",
+        "progress_chapter": 5,
+        "progress_volume": 1,
+        "rating": 70,
+        "is_private": false,
+        "finish_date": "2023-12-25"
+      }
+    },
+    "120999": {
+      "updatedAt": 1741709321,
+      "payload": {
+        "series_id": 101194,
+        "state": "completed",
+        "progress_chapter": 0,
+        "progress_volume": 1,
+        "rating": 70,
+        "is_private": false,
+        "start_date": "2024-01-10",
+        "finish_date": "2024-01-10"
+      }
+    },
+    "76128": {
+      "updatedAt": 1741015306,
+      "payload": {
+        "series_id": 16968,
+        "state": "completed",
+        "progress_chapter": 18,
+        "progress_volume": 3,
+        "rating": 70,
+        "is_private": false
+      }
+    },
+    "204271": {
+      "updatedAt": 1775563120,
+      "payload": {
+        "series_id": 570392,
+        "state": "reading",
+        "progress_chapter": 4,
+        "progress_volume": 0,
+        "is_private": true,
+        "start_date": "2025-12-22"
+      }
+    },
+    "149342": {
+      "updatedAt": 1789750270,
+      "payload": {
+        "series_id": 235,
+        "state": "reading",
+        "progress_chapter": 58,
+        "progress_volume": 0,
+        "is_private": false,
+        "start_date": "2026-06-29"
+      }
+    },
+    "85405": {
+      "updatedAt": 1719727427,
+      "payload": {
+        "series_id": 112569,
+        "state": "plan_to_read",
+        "progress_chapter": 0,
+        "progress_volume": 0,
+        "is_private": false
+      }
     }
   },
-  "last_sync_timestamp": 1790959039
+  "last_sync_timestamp": 1790961775
 }
