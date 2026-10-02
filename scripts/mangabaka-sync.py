@@ -217,12 +217,15 @@ def push_batches(mb_entries):
             print(f"Batch {i // 100 + 1} rejected (HTTP {res.status_code}): {res.text}")
             print("Falling back to single updates for this batch...")
             for item in chunk:
-                single_url = f"{MB_BASE}/v1/my/library/{item['series_id']}"
-                sr = requests.post(single_url, headers=headers, json=item, timeout=15)
+                sid = item["series_id"]
+                single_url = f"{MB_BASE}/v1/my/library/{sid}"
+                # series_id is in URL path; remove from JSON body to satisfy schema
+                body = {k: v for k, v in item.items() if k != "series_id"}
+                sr = requests.post(single_url, headers=headers, json=body, timeout=15)
                 if sr.status_code not in (200, 201):
-                    sr = requests.put(single_url, headers=headers, json=item, timeout=15)
+                    sr = requests.put(single_url, headers=headers, json=body, timeout=15)
                 if sr.status_code not in (200, 201):
-                    print(f"  Series {item['series_id']} failed: {sr.status_code} - {sr.text}")
+                    print(f"  Series {sid} failed: {sr.status_code} - {sr.text}")
                     all_success = False
 
     return all_success
@@ -245,7 +248,7 @@ def main():
 
     resolve_all_ids(entries, cache, force_full=FORCE_FULL_SYNC)
 
-    mb_payload = []
+    mb_payload_raw = []
     unmapped_updated = []
     updated_state = dict(synced_entries)
     mapped_count = 0
@@ -289,11 +292,25 @@ def main():
             has_changed = True
 
         if has_changed:
-            mb_payload.append(clean_item)
+            mb_payload_raw.append(clean_item)
             updated_state[mid] = {
                 "updatedAt": al_updated_at,
                 "payload": clean_item
             }
+
+    # Deduplicate mb_payload by series_id so MangaBaka batch API never sees duplicate series_id
+    deduped_payload = {}
+    for item in mb_payload_raw:
+        sid = item["series_id"]
+        if sid not in deduped_payload:
+            deduped_payload[sid] = item
+        else:
+            # Keep the one with greater chapter progress
+            existing = deduped_payload[sid]
+            if (item.get("progress_chapter") or 0) >= (existing.get("progress_chapter") or 0):
+                deduped_payload[sid] = item
+    
+    mb_payload = list(deduped_payload.values())
 
     print(f"\nLibrary Status: {mapped_count} mapped titles out of {len(entries)} AniList entries.")
     if unmapped_updated:
@@ -301,7 +318,7 @@ def main():
         for t in unmapped_updated[:5]:
             print(f"  - {t}")
 
-    print(f"Change detection: {len(mb_payload)} entries changed/new.")
+    print(f"Change detection: {len(mb_payload)} entries changed/new (after deduplicating series IDs).")
 
     if not mb_payload:
         print("Everything is already up-to-date with MangaBaka. No API requests needed!")
