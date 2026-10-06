@@ -7104,11 +7104,11 @@
       }
     },
     "149332": {
-      "updatedAt": 1790445532,
+      "updatedAt": 1791262725,
       "payload": {
         "series_id": 267,
         "state": "reading",
-        "progress_chapter": 214,
+        "progress_chapter": 215,
         "progress_volume": 0,
         "is_private": false
       }
@@ -7594,5 +7594,5 @@
       }
     }
   },
-  "last_sync_timestamp": 1791025341
+  "last_sync_timestamp": 1791290477
 }
