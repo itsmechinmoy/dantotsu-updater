@@ -6901,11 +6901,11 @@
       }
     },
     "175756": {
-      "updatedAt": 1791016660,
+      "updatedAt": 1791395353,
       "payload": {
         "series_id": 92375,
         "state": "reading",
-        "progress_chapter": 110,
+        "progress_chapter": 121,
         "progress_volume": 0,
         "is_private": true,
         "start_date": "2024-07-07"
@@ -7594,5 +7594,5 @@
       }
     }
   },
-  "last_sync_timestamp": 1791290477
+  "last_sync_timestamp": 1791412649
 }
