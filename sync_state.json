@@ -1160,11 +1160,11 @@
       }
     },
     "106260": {
-      "updatedAt": 1791017041,
+      "updatedAt": 1791484062,
       "payload": {
         "series_id": 92430,
         "state": "reading",
-        "progress_chapter": 10,
+        "progress_chapter": 14,
         "progress_volume": 0,
         "rating": 67,
         "is_private": true,
@@ -6901,14 +6901,15 @@
       }
     },
     "175756": {
-      "updatedAt": 1791395353,
+      "updatedAt": 1791483085,
       "payload": {
         "series_id": 92375,
-        "state": "reading",
-        "progress_chapter": 121,
+        "state": "completed",
+        "progress_chapter": 126,
         "progress_volume": 0,
         "is_private": true,
-        "start_date": "2024-07-07"
+        "start_date": "2024-07-07",
+        "finish_date": "2026-10-08"
       }
     },
     "172094": {
@@ -7592,7 +7593,28 @@
         "progress_volume": 0,
         "is_private": false
       }
+    },
+    "153758": {
+      "updatedAt": 1791478015,
+      "payload": {
+        "series_id": 123677,
+        "state": "reading",
+        "progress_chapter": 1,
+        "progress_volume": 0,
+        "is_private": true,
+        "start_date": "2026-10-08"
+      }
+    },
+    "108834": {
+      "updatedAt": 1791478368,
+      "payload": {
+        "series_id": 9646,
+        "state": "plan_to_read",
+        "progress_chapter": 0,
+        "progress_volume": 0,
+        "is_private": false
+      }
     }
   },
-  "last_sync_timestamp": 1791412649
+  "last_sync_timestamp": 1791499760
 }
