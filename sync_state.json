@@ -1160,11 +1160,11 @@
       }
     },
     "106260": {
-      "updatedAt": 1791484062,
+      "updatedAt": 1792783587,
       "payload": {
         "series_id": 92430,
         "state": "reading",
-        "progress_chapter": 14,
+        "progress_chapter": 19,
         "progress_volume": 0,
         "rating": 67,
         "is_private": true,
@@ -7616,5 +7616,5 @@
       }
     }
   },
-  "last_sync_timestamp": 1792267347
+  "last_sync_timestamp": 1792788959
 }
