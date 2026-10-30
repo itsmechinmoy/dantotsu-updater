@@ -2,7 +2,7 @@ name: Sync AniList Bio Card
 
 on:
   schedule:
-    # Runs every 5 minutes 24/7
+    # Runs every 5 minutes 24/7 in the cloud
     - cron: '*/5 * * * *'
   workflow_dispatch: # Allows clicking "Run workflow" in GitHub anytime
 
@@ -10,9 +10,6 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -22,4 +19,166 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: node sync.js
+        run: |
+          cat << 'EOF' > sync.mjs
+          const USERNAME = 'itsmechinmoy';
+          const ACCOUNT_ID = '5dae7c5c4e0eb7573667ea3dff15602b';
+          const NAMESPACE_ID = 'e17a48fced104627abfb77f17733463d';
+
+          async function putKV(key, value) {
+            const apiToken = process.env.CLOUDFLARE_API_TOKEN;
+            const accountId = process.env.CLOUDFLARE_ACCOUNT_ID || ACCOUNT_ID;
+
+            if (!apiToken) {
+              throw new Error('CLOUDFLARE_API_TOKEN secret is missing!');
+            }
+
+            console.log(`Uploading key "${key}" to Cloudflare KV via REST API...`);
+            const url = `https://api.cloudflare.com/client/v4/accounts/${accountId}/storage/kv/namespaces/${NAMESPACE_ID}/values/${encodeURIComponent(key)}`;
+            const strVal = typeof value === 'string' ? value : JSON.stringify(value);
+            const resp = await fetch(url, {
+              method: 'PUT',
+              headers: {
+                'Authorization': `Bearer ${apiToken}`,
+                'Content-Type': 'text/plain; charset=utf-8',
+              },
+              body: strVal,
+            });
+            if (!resp.ok) {
+              const err = await resp.text();
+              throw new Error(`Cloudflare KV API failed (${resp.status}): ${err}`);
+            }
+            console.log(`Successfully updated key "${key}" via REST API!`);
+          }
+
+          async function fetchAniListData(userName) {
+            const query = `
+              query($userName: String) {
+                anime: MediaListCollection(userName: $userName, type: ANIME, status: CURRENT, sort: [UPDATED_TIME_DESC]) {
+                  lists {
+                    entries {
+                      id
+                      status
+                      progress
+                      updatedAt
+                      media {
+                        id
+                        title {
+                          romaji
+                          english
+                          userPreferred
+                        }
+                        coverImage {
+                          large
+                          medium
+                        }
+                        status
+                        episodes
+                        chapters
+                        format
+                        type
+                        nextAiringEpisode {
+                          airingAt
+                          timeUntilAiring
+                          episode
+                        }
+                      }
+                    }
+                  }
+                }
+                manga: MediaListCollection(userName: $userName, type: MANGA, status: CURRENT, sort: [UPDATED_TIME_DESC]) {
+                  lists {
+                    entries {
+                      id
+                      status
+                      progress
+                      updatedAt
+                      media {
+                        id
+                        title {
+                          romaji
+                          english
+                          userPreferred
+                        }
+                        coverImage {
+                          large
+                          medium
+                        }
+                        status
+                        episodes
+                        chapters
+                        format
+                        type
+                      }
+                    }
+                  }
+                }
+              }
+            `;
+
+            const resp = await fetch('https://graphql.anilist.co', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+              },
+              body: JSON.stringify({ query, variables: { userName } }),
+            });
+
+            if (!resp.ok) {
+              throw new Error(`AniList returned HTTP ${resp.status}`);
+            }
+
+            const json = await resp.json();
+            const entries = [];
+            for (const mType of ['anime', 'manga']) {
+              const lists = json?.data?.[mType]?.lists || [];
+              for (const list of lists) {
+                if (list.entries) {
+                  entries.push(...list.entries);
+                }
+              }
+            }
+
+            entries.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+            return entries.slice(0, 5);
+          }
+
+          async function fetchImageBase64(url) {
+            if (!url) return '';
+            const resp = await fetch(url);
+            if (!resp.ok) return '';
+            const contentType = resp.headers.get('content-type') || 'image/jpeg';
+            const buffer = await resp.arrayBuffer();
+            const b64 = Buffer.from(buffer).toString('base64');
+            return `data:${contentType};base64,${b64}`;
+          }
+
+          async function main() {
+            console.log(`Fetching latest AniList anime and manga for ${USERNAME}...`);
+            const top5 = await fetchAniListData(USERNAME);
+            console.log(`Found ${top5.length} watching/reading entries.`);
+
+            console.log('Downloading and encoding cover images...');
+            const cardData = [];
+            for (let i = 0; i < top5.length; i++) {
+              const entry = top5[i];
+              const title = entry.media.title.english || entry.media.title.userPreferred || entry.media.title.romaji;
+              console.log(`  [${i+1}] ${title} (EP/CH ${entry.progress})`);
+              const coverUrl = entry.media.coverImage.large || entry.media.coverImage.medium;
+              const coverBase64 = await fetchImageBase64(coverUrl);
+              cardData.push({ entry, coverBase64 });
+            }
+
+            await putKV('ANILIST_DATA', cardData);
+            await putKV('ANILIST_DATA_UPDATED_AT', String(Date.now()));
+            console.log('All done! Cloudflare KV updated successfully.');
+          }
+
+          main().catch((err) => {
+            console.error('Fatal error:', err);
+            process.exit(1);
+          });
+          EOF
+
+          node sync.mjs
