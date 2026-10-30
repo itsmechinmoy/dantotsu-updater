@@ -2,14 +2,17 @@ name: Sync AniList Bio Card
 
 on:
   schedule:
-    # Runs every 5 minutes 24/7 in the cloud
+    # Runs every 5 minutes, 24/7
     - cron: '*/5 * * * *'
-  workflow_dispatch: # Allows clicking "Run workflow" in GitHub anytime
+  workflow_dispatch: # Allows manual trigger from GitHub Actions tab
 
 jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -19,8 +22,6 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: |
-          cat << 'EOF' > sync.mjs
           const USERNAME = 'itsmechinmoy';
           const ACCOUNT_ID = '5dae7c5c4e0eb7573667ea3dff15602b';
           const NAMESPACE_ID = 'e17a48fced104627abfb77f17733463d';
@@ -59,6 +60,7 @@ jobs:
                     entries {
                       id
                       status
+                      score
                       progress
                       updatedAt
                       media {
@@ -72,6 +74,7 @@ jobs:
                           large
                           medium
                         }
+                        averageScore
                         status
                         episodes
                         chapters
@@ -91,6 +94,7 @@ jobs:
                     entries {
                       id
                       status
+                      score
                       progress
                       updatedAt
                       media {
@@ -104,6 +108,7 @@ jobs:
                           large
                           medium
                         }
+                        averageScore
                         status
                         episodes
                         chapters
@@ -179,6 +184,3 @@ jobs:
             console.error('Fatal error:', err);
             process.exit(1);
           });
-          EOF
-
-          node sync.mjs
