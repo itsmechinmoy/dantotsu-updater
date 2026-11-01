@@ -50,6 +50,34 @@ jobs:
             console.log(`Successfully updated key "${key}" via REST API!`);
           }
 
+          async function fetchMangaBakaLatestChapter(anilistId) {
+            if (!anilistId) return null;
+            try {
+              const url = `https://api.mangabaka.org/v1/source/anilist/${anilistId}?with_internal=false&with_series=true&with_merged_series=false&with_source_response=false`;
+              const resp = await fetch(url, {
+                headers: {
+                  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+                  'Accept': 'application/json',
+                },
+              });
+              if (!resp.ok) return null;
+              const json = await resp.json();
+              const series = json?.data?.series;
+              if (Array.isArray(series) && series.length > 0) {
+                const totalCh = series[0]?.total_chapters;
+                if (totalCh != null) {
+                  const parsed = parseFloat(totalCh);
+                  if (!isNaN(parsed) && parsed > 0) {
+                    return parsed;
+                  }
+                }
+              }
+            } catch (err) {
+              console.warn(`Failed to fetch MangaBaka for AniList ID ${anilistId}:`, err.message);
+            }
+            return null;
+          }
+
           async function fetchAniListData(userName) {
             const query = `
               query($userName: String) {
@@ -162,12 +190,27 @@ jobs:
             const top5 = await fetchAniListData(USERNAME);
             console.log(`Found ${top5.length} watching/reading entries.`);
 
-            console.log('Downloading and encoding cover images...');
+            console.log('Downloading cover images and fetching MangaBaka chapter counts...');
             const cardData = [];
             for (let i = 0; i < top5.length; i++) {
               const entry = top5[i];
+              const isManga = entry.media.type === 'MANGA';
               const title = entry.media.title.english || entry.media.title.userPreferred || entry.media.title.romaji;
-              console.log(`  [${i+1}] ${title} (EP/CH ${entry.progress})`);
+              
+              if (isManga && !entry.media.chapters) {
+                const latestCh = await fetchMangaBakaLatestChapter(entry.media.id);
+                if (latestCh) {
+                  entry.media.latestChapter = latestCh;
+                  console.log(`  [${i+1}] ${title} (CH ${entry.progress} / ${latestCh} via MangaBaka)`);
+                } else {
+                  console.log(`  [${i+1}] ${title} (CH ${entry.progress})`);
+                }
+              } else {
+                const unit = isManga ? 'CH' : 'EP';
+                const tot = entry.media.chapters || entry.media.episodes;
+                console.log(`  [${i+1}] ${title} (${unit} ${entry.progress}${tot ? ' / ' + tot : ''})`);
+              }
+
               const coverUrl = entry.media.coverImage.large || entry.media.coverImage.medium;
               const coverBase64 = await fetchImageBase64(coverUrl);
               cardData.push({ entry, coverBase64 });
