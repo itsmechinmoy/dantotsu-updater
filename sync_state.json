@@ -2310,14 +2310,14 @@
       }
     },
     "114608": {
-      "updatedAt": 1789750269,
+      "updatedAt": 1795238607,
       "payload": {
         "series_id": 113240,
-        "state": "paused",
+        "state": "reading",
         "progress_chapter": 105,
         "progress_volume": 0,
         "rating": 70,
-        "is_private": false,
+        "is_private": true,
         "start_date": "2024-03-03",
         "finish_date": "2024-03-03"
       }
@@ -7508,13 +7508,13 @@
       }
     },
     "87400": {
-      "updatedAt": 1789750269,
+      "updatedAt": 1795238625,
       "payload": {
         "series_id": 111652,
-        "state": "paused",
+        "state": "reading",
         "progress_chapter": 166,
         "progress_volume": 0,
-        "is_private": false
+        "is_private": true
       }
     },
     "156310": {
@@ -7617,5 +7617,5 @@
       }
     }
   },
-  "last_sync_timestamp": 1794879019
+  "last_sync_timestamp": 1795238902
 }
